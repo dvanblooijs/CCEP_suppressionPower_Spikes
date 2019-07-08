@@ -4,9 +4,6 @@
 % made BIDS compatible by: Dorien van Blooijs
 % date: July 2019
 
-clear all
-close all
-
 addpath(genpath('/Users/michelle/Google Drive/M3/Onderzoek/Matlab/output/OUTPUT_PAT119'));
 addpath(genpath('/Users/michelle/Google Drive/M3/Onderzoek/Matlab/output/OUTPUT_PAT130'));
 addpath(genpath('/Users/michelle/Google Drive/M3/Onderzoek/Matlab/output/OUTPUT_PAT126'));
