@@ -9,10 +9,14 @@ function dataBase = makeTFSPES(dataBase,cfg)
 for subj = 1:size(dataBase,2)
     fs = dataBase(subj).ccep_header.Fs;
     
+    % pre-allocation
+    allERSP = cell(size(dataBase(subj).cc_epoch_sorted,3),size(dataBase(subj).cc_epoch_sorted,1));
+    allERSP2 = cell(size(dataBase(subj).cc_epoch_sorted,3),size(dataBase(subj).cc_epoch_sorted,1));
+    
     %% Choose stimulation from specific electrode
     for n=1:size(dataBase(subj).cc_epoch_sorted,3) % number for stim pair
         for m = 1:size(dataBase(subj).cc_epoch_sorted,1) % number for recording electrode
-
+            
             tmpsig = squeeze(dataBase(subj).cc_epoch_sorted(n,:,m,:));
             tmpsig=tmpsig(:,fs:3*fs-1)';                                             % get 2 seconds (1sec before stim,1 sec after)
             
@@ -34,10 +38,10 @@ for subj = 1:size(dataBase,2)
             chlabel=sprintf('TF-SPES stim %s-%s response %s',...
                 dataBase(subj).cc_stimchans{n,1},dataBase(subj).cc_stimchans{n,2},...
                 dataBase(subj).ch{m});
-           
+            
             % Michelle used gjnewtimef but the results are equal so I choose to use newtimef
-%             [ERSPgj,~,powbasegj,timesgj,freqsgj,erspbootgj,~]=gjnewtimef(tmpsig(:,:),length(pointrange),[tlimits(1) tlimits(2)],EEG.srate,cycles,'type','coher','title',chlabel, 'padratio',4,...
-%                 'plotphase','off','freqs',frange,'plotitc','off','newfig','off','erspmax',15','alpha',0.05,'baseline',[-1000 -100]); % change alpha number to NaN to turn bootstrapping off
+            %             [ERSPgj,~,powbasegj,timesgj,freqsgj,erspbootgj,~]=gjnewtimef(tmpsig(:,:),length(pointrange),[tlimits(1) tlimits(2)],EEG.srate,cycles,'type','coher','title',chlabel, 'padratio',4,...
+            %                 'plotphase','off','freqs',frange,'plotitc','off','newfig','off','erspmax',15','alpha',0.05,'baseline',[-1000 -100]); % change alpha number to NaN to turn bootstrapping off
             [ERSP,~,powbase,times,freqs,erspboot,~]=newtimef(tmpsig(:,:),length(pointrange),[tlimits(1) tlimits(2)],EEG.srate,cycles,'type','coher','title',chlabel, 'padratio',4,...
                 'plotphase','off','freqs',frange,'plotitc','off','newfig','off','erspmax',15','alpha',0.05,'baseline',[-1000 -100]); % change alpha number to NaN to turn bootstrapping off
             
@@ -45,7 +49,7 @@ for subj = 1:size(dataBase,2)
             
             outlabel=sprintf('Stimpair%s-%s_Response%s.jpg',...
                 dataBase(subj).cc_stimchans{n,1},dataBase(subj).cc_stimchans{n,2},dataBase(subj).ch{m});
-
+            
             if strcmp(cfg.saveERSP,'yes')
                 % Create a name for a subfolder within output
                 output = [cfg.output dataBase(subj).subj];
@@ -59,7 +63,7 @@ for subj = 1:size(dataBase,2)
                 saveas(gcf,[newSubFolder,outlabel],'jpg')
             end
             
-            close(gcf);            
+            close(gcf);
             
             %% Hysteresis
             t_start = length(times)/2+1;                        % t_start after stim

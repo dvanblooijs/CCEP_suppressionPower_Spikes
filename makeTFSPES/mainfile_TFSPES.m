@@ -1,4 +1,6 @@
 %% mainfile_TFSPES
+% author: Dorien van Blooijs
+% date: july 2019
 
 %% process the data to enable construction of TFSPES plots
 
