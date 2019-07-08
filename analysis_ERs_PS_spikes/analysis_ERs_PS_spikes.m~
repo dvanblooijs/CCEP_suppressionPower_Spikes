@@ -1,0 +1,183 @@
+% CCEP_powerSuppression_ERs_spikes
+% this code analyzes the relationship between ERs, spikes and
+% powerSuppression.
+% author: D van Blooijs
+% date: April 2019
+
+
+% stappen:
+% 1: eerste 15 minuten van de file pieken scoren in 1 kanaal (triggers in
+%       ECoG Systemplus)
+% 2: SPES van deze 10 patienten in BIDS zetten --> check! :)
+% 3: power suppression van Michelle in derivatives BIDS zetten --> check :)
+% 4: ERs in derivatives BIDS zetten --> check
+% 5: per patient goede spike detectie maken adhv eerst gescoorde pieken in
+%       deze patienten --> 10 min trainen, 5 min testen
+% 6: spikes detecteren in rest van ECoG
+% 7: latency tussen spikes bepalen voor en na stimulatie :)
+% 8: statistical analysis
+% 9: make figures
+% 10: check SVM-scripts Michelle and make them BIDS compatible
+
+
+%% load ECoGs with SPES from 10 patients
+% RESP0401, RESP0435, RESP0458, RESP0478, RESP0502, RESP0574, RESP0589,
+% RESP0608, RESP0621, RESP0699
+
+%% find unique stimulation pairs and stimulus current
+
+for subj = 1:size(sub_labels,2)
+    
+    all_stimcur = str2double(dataBase(subj).tb_events.electrical_stimulation_current)*1000;
+    all_stimchans = dataBase(subj).tb_events.electrical_stimulation_site(~isnan(all_stimcur));
+    all_stimcur = all_stimcur(~isnan(all_stimcur));
+    
+    % convert stimulus pairs to numbers without unnecessary channels
+    stimelecnum = NaN(size(all_stimchans,1),2);
+    for stimp = 1:size(all_stimchans,1)
+        stimsplit = strsplit(all_stimchans{stimp},'-');
+        for elec  =1 :size(stimsplit,2)
+            stimelecnum(stimp,elec) = find(strcmp(dataBase(subj).ch,stimsplit{elec}));
+        end
+    end
+    
+    % get the unique number of stimulated pairs:
+    % - use [sort(stimelecnum,2) all_stimcur] if you do not want to differentiate direction (positive/negative) of stimulation;
+    % - use sort(stimelecnum,2) if you do not want to differentiate direction (positive/negative) of stimulation and stimulus current;
+    % - use [stimelecnum, all_stimcur] if you want to differentiate positive and negative stimulation
+    % - use [stimelecnum] if you want to differentiate positive and negative stimulation but not stimulus current
+    stimelecs = sort(stimelecnum,2);
+    [cc_stimsets,~,IC] = unique(stimelecs,'rows');
+    
+    % number of stimuli in each trial
+    n = histcounts(IC,'BinMethod','integers');
+    if any(diff(n) ~= 0)
+        % remove all stimpairs that are stimulated less than 5 times
+        stimnum = find(n<5);
+        stimelecs(IC==stimnum,:) = [];
+        
+        [cc_stimsets,~,IC] = unique(stimelecs,'rows');
+        
+        % number of stimuli in each trial
+        n = histcounts(IC,'BinMethod','integers');
+        
+        if any(diff(n) ~= 0) 
+            
+            fprintf('Patient %s: Not all stimulation have been repeated with the same number of stimuli\n',dataBase(subj).subj)
+            
+        end
+    end
+    
+    cc_stimchans = cell(size(dataBase(subj).cc_stimsets,1),1);
+    
+    for yy = 1: length(dataBase(subj).cc_stimsets)
+        elecs = cc_stimsets(yy,:);
+        cc_stimchans{yy,1} = [dataBase(subj).ch{elecs(1)}, '-', dataBase(subj).ch{elecs(2)}];
+    end
+    
+    dataBase(subj).cc_stimsets = cc_stimsets;
+    dataBase(subj).IC = IC;
+    dataBase(subj).stimnum_max = max(n);
+    dataBase(subj).stimnum_median = median(n);
+    dataBase(subj).cc_stimchans = cc_stimchans;
+end
+
+%% epoch files in 2spre-2spost in selected stimuli
+epoch_length = 4; % in seconds, -2:2
+epoch_prestim = 2;
+
+for subj = 1:size(sub_labels,2)
+    %     stimevent = strcmp(dataBase(subj).tb_events.trial_type,'electrical_stimulation');
+    %     data_epoch = zeros(size(dataBase(subj).data,1),sum(stimevent),round(epoch_length*ccep_header.Fs));
+    
+    % allocation
+    cc_epoch_sorted = NaN(size(dataBase(subj).data_epoch,1),max_stim,size(dataBase(subj).cc_stimsets,1),size(dataBase(subj).data_epoch,3));
+    cc_stimchans = cell(size(dataBase(subj).cc_stimsets,1),1);
+    % data_epoch = zeros(size(dataBase(subj).data,1),size(dataBase(subj).IC,1),round(epoch_length*ccep_header.Fs));
+    
+    for elec = 1:size(dataBase(subj).data,1) % for all channels
+        %         for ll = 1:length(dataBase(subj).tb_events.onset) % for all epochs
+        for ll = 1:length(dataBase(subj).cc_stimsets) % for all epochs with >4 stimuli
+            eventnum = find(strcmp(dataBase(subj).tb_events.electrical_stimulation_site,dataBase(subj).cc_stimchans{ll}));
+            for n=1:size(eventnum,1)
+                cc_epoch_sorted(elec,n,ll,:) = dataBase(subj).data(elec,dataBase(subj).tb_events.sample_start(eventnum(n))-round(epoch_prestim*dataBase(subj).ccep_header.Fs)+1:dataBase(subj).tb_events.sample_start(eventnum(n))+round((epoch_length-epoch_prestim)*dataBase(subj).ccep_header.Fs));
+            end
+        end
+    end
+    
+    cc_epoch_sorted_avg = squeeze(nanmean(cc_epoch_sorted,2));
+    
+    dataBase(subj).cc_epoch_sorted = cc_epoch_sorted;
+    dataBase(subj).cc_epoch_sorted_avg = cc_epoch_sorted_avg;
+    
+    fprintf('...%s has been epoched and averaged... \n',dataBase(subj).subj)
+end
+
+fprintf('Data of all subjects have been epoched and averaged\n')
+
+%% plot avg epoch
+subj = 4;
+trial = 2;
+elec = 6;
+tt =-round(epoch_prestim*dataBase(subj).ccep_header.Fs)+1:round((epoch_length-epoch_prestim)*dataBase(subj).ccep_header.Fs);
+
+figure(1),
+plot(tt,squeeze(dataBase(subj).cc_epoch_sorted(elec,:,trial,:)));
+hold on
+plot(tt,squeeze(dataBase(subj).cc_epoch_sorted_avg(elec,trial,:)),'k','linewidth',2);
+hold off
+xlabel('time(s)')
+ylabel('amplitude(uV)')
+title(sprintf('%s: Electrode %s, stimulating %s',dataBase(subj).subj,dataBase(subj).ch{elec},dataBase(subj).cc_stimchans{trial}))
+
+%% sort ERs_BB to cc_stimsets
+
+for subj = 1:size(dataBase,2)
+   stimchans = reshape([dataBase(subj).ERs_BB(:).stimchans],2, size(dataBase(subj).ERs_BB,2))';
+    if isequal(dataBase(subj).cc_stimsets,stimchans)
+        for stimp = 1:size(dataBase(subj).cc_stimsets,1)
+            
+            dataBase(subj).cc_ERs(stimp).vis = dataBase(subj).ERs_BB(stimp).ERsvis;
+            dataBase(subj).cc_BBs(stimp).det = dataBase(subj).ERs_BB(stimp).BB;
+            
+        end
+        
+    else
+        for stimp = 1:size(dataBase(subj).cc_stimsets,1)
+            stimnum = find(stimchans(:,1) == dataBase(subj).cc_stimsets(stimp,1)) & find(stimchans(:,2) == dataBase(subj).cc_stimsets(stimp,2));
+            
+            dataBase(subj).cc_ERs(stimp).vis = dataBase(subj).ERs_BB(stimnum).ERsvis;
+            dataBase(subj).cc_BBs(stimp).det = dataBase(subj).ERs_BB(stimnum).BB;
+            
+        end
+    end    
+end
+
+
+%% determine spike detection parameters and performance
+
+par = setParCortSpikes; % nog maken
+
+%% detect spikes
+
+detCortSpikes(ECoG,par); % nog maken/aanpassen van findCortSpikes
+
+%% make ratio spike change
+
+
+
+%% categorize into : 0=no change, 1=decrease, 2=increase
+
+%% analysis ERs_PS
+% chi squared test
+% [~,~,pchi] = crosstab(round(pmat),ERmat);
+
+% figure stacked bar plot
+
+%% analysis ERs_spikes
+% chi squared test
+% figure stacked bar plot
+
+%% analysis PS_spikes
+% chi squared test
+% figure stacked bar plot
