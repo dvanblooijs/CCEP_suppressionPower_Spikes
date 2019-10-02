@@ -18,13 +18,12 @@ cfg.dataPath = '/Fridge/CCEP';
 cfg.sub_labels = { 'sub-RESP0607', 'sub-RESP0638', 'sub-RESP0676', 'sub-RESP0690'};
 cfg.ses_label = 'ses-1';
 cfg.task_label = 'task-SPESclin';
+cfg.run_label = {'run-021120','run-031049','run-021423','run-041139'};
 cfg.ERpath = '/Fridge/users/dorien/derivatives/BB_article/CCEPderiv';
 
 %% load ECoGs with SPES from X patients
 
 dataBase = load_ECoGdata(cfg);
-disp('All ECoGs are loaded')
-
 
 %% preprocessing CCEP in ECoG
 
