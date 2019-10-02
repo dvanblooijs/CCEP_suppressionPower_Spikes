@@ -8,23 +8,37 @@ dataPath = cfg.dataPath;
 sub_labels = cfg.sub_labels;
 ses_label = cfg.ses_label;
 task_label = cfg.task_label;
+if isfield(cfg,'run_label')
+   run_label = cfg.run_label;
+else
+    run_label(1:size(sub_labels,2)) = {'run-*'};
+end
 
 dataBase = struct([]);
 for i=1:size(sub_labels,2)
     D = dir(fullfile(dataPath,[ sub_labels{i}],ses_label,'ieeg',...
-        [sub_labels{i} '_' ses_label '_' task_label ,'_run-*_ieeg.eeg']));
+        [sub_labels{i} '_' ses_label '_' task_label ,'_',run_label{i}, '_ieeg.eeg']));
     
-    % determin run_label
-    run_label = D(1).name(strfind(D(1).name,'run-'):strfind(D(1).name,'_ieeg')-1);
-    
-    dataName = fullfile(D(1).folder, D(1).name);
+    % determine run_label
+    if ~isfield(cfg,'run_label')
+        if size(D,1) == 1
+            run_label{i} = D(1).name(strfind(D(1).name,'run-'):strfind(D(1).name,'_ieeg')-1);
+        else
+            run_label{i} = D(1).name(strfind(D(1).name,'run-'):strfind(D(1).name,'_ieeg')-1);
+            fprintf('WARNING: More runs were available for %s_%s_%s, so determine run_label! \n',sub_labels{i},ses_label,task_label)
+        end
+        
+        dataName = fullfile(D(1).folder, D(1).name);
+    else
+        dataName = fullfile(D(1).folder, D(1).name);
+    end
     
     ccep_data = ft_read_data(dataName,'dataformat','brainvision_eeg');
     ccep_header = ft_read_header(dataName);
     
     % load events
     D = dir(fullfile(dataPath,[sub_labels{i}],ses_label,'ieeg',...
-        [sub_labels{i} '_' ses_label '_' task_label ,'_run-*_events.tsv']));
+        [sub_labels{i} '_' ses_label '_' task_label ,'_',run_label{i},'_events.tsv']));
     
     eventsName = fullfile(D(1).folder, D(1).name);
     
@@ -42,7 +56,7 @@ for i=1:size(sub_labels,2)
     
     % load channels
     D = dir(fullfile(dataPath,[sub_labels{i}], ses_label,'ieeg',...
-        [sub_labels{i} '_' ses_label '_' task_label ,'_run-*_channels.tsv']));
+        [sub_labels{i} '_' ses_label '_' task_label ,'_',run_label{i},'_channels.tsv']));
     
     channelsName = fullfile(D(1).folder, D(1).name);
     
