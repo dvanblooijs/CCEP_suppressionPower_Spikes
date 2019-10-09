@@ -15,6 +15,7 @@ cfg.dataPath = '/Fridge/CCEP';
 % cfg.sub_labels = { 'sub-RESP0401', 'sub-RESP0435', 'sub-RESP0458', 'sub-RESP0478', 'sub-RESP0502',...
 %     'sub-RESP0574', 'sub-RESP0589', 'sub-RESP0608', 'sub-RESP0621', 'sub-RESP0699'};
 % train SVM detection for BB
+% old database: PAT119, PAT126, PAT130, PAT135
 cfg.sub_labels = { 'sub-RESP0607', 'sub-RESP0638', 'sub-RESP0676', 'sub-RESP0690'};
 cfg.ses_label = 'ses-1';
 cfg.task_label = 'task-SPESclin';

@@ -55,9 +55,9 @@ for subj = 1:size(dataBase,2)
                 
                 if strcmp(cfg.saveERSP,'yes')
                     % Create a name for a subfolder within output
-                    output = fullfile(cfg.output,dataBase(1).sub_label,dataBase(1).ses_label,...
-                        dataBase(1).run_label);
-                        
+                    output = fullfile(cfg.output,dataBase(subj).sub_label,dataBase(subj).ses_label,...
+                        dataBase(subj).run_label);
+                    
                     newSubFolder = sprintf('%s/Stimpair%s-%s/', output,...
                         dataBase(subj).cc_stimchans{stimp,1},dataBase(subj).cc_stimchans{stimp,2});
                     % Create the folder if it doesn't exist already.
@@ -92,16 +92,20 @@ for subj = 1:size(dataBase,2)
                 allERSPboot{stimp,chan} = [];
                 allERSP2{stimp,chan} = [];
                 allERSPboot2{stimp,chan} = [];
-
+                
             end
         end
         
         if strcmp(cfg.saveERSP,'yes')
             
             targetFolder = output;
-            fileName=['/' dataBase(1).sub_label,'_' dataBase(1).ses_label,...
-                        '_', dataBase(1).task_label,'_',dataBase(1).run_label '_ERSP.mat'];
-            save([targetFolder,fileName], 'allERSP', 'allERSP2', 'allERSPboot','allERSPboot2','times','freqs');
+            fileName=['/' dataBase(subj).sub_label,'_' dataBase(subj).ses_label,...
+                '_', dataBase(subj).task_label,'_',dataBase(subj).run_label '_ERSP.mat'];
+            cc_stimchans = dataBase(subj).cc_stimchans;
+            cc_stimsets = dataBase(subj).cc_stimsets;
+            ch = dataBase(subj).ch;
+            
+            save([targetFolder,fileName], 'allERSP', 'allERSP2', 'allERSPboot','allERSPboot2','times','freqs','cc_stimchans','cc_stimsets','ch');
         end
         
         dataBase(subj).ERSP = allERSP;
