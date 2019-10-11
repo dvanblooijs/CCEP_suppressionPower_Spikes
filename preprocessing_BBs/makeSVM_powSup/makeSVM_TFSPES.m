@@ -15,46 +15,67 @@ cfg.dataPath = '/Fridge/CCEP';
 cfg.sub_labels = { 'sub-RESP0607', 'sub-RESP0638','sub-RESP0676','sub-RESP0690'};
 cfg.ses_label = 'ses-1';
 cfg.task_label = 'task-SPESclin';
-
+cfg.run_label = {'run-021120','run-031049','run-021423','run-041139'};
+cfg.train = 1:3;
+cfg.test = 4;
 
 %% load visual ratings
 cfg.dir_visrate = '/Fridge/users/dorien/derivatives/BB_article/BB_visrating';
 
 D = dir(cfg.dir_visrate);
 filenames = {D.name};
-dataBase = struct;
+% dataBase = struct;
 
 for subj = 1 : size(cfg.sub_labels,2)
     dataBase(subj).sub_label = cfg.sub_labels{subj};
     dataBase(subj).ses_label = cfg.ses_label;
     dataBase(subj).task_label = cfg.task_label;
+    dataBase(subj).run_label = cfg.run_label{subj};
     
-    clear BS_visscores stimorder_visscores
+    clear BS_visscores stimorder_visscores chan_visscores stimp_visscores stimpnum_visscores
     
     files = find(contains(filenames,cfg.sub_labels{subj}));
-    for i=1:size(files,2)
-        % load visual scoring from excel-file
-        [num,txt,raw] = xlsread(fullfile(cfg.dir_visrate,filenames{files(i)}));
-        % remove first row with stimulation pairs (see txt)
-        raw(1,:) = [];
-        % remove first column with numbers of electrodes
-        raw(:,1) = [];
-        % remove NaN-values
-        raw(all(cellfun(@(x) any(isnan(x)),raw),2),:) = [];
-        raw = celltomat(raw);
-        BS_visscores(i,:,:) = raw;
-        stimorder_visscores(i,:,:) = txt;
-    end
-    
-    if isequal(stimorder_visscores(1,:), stimorder_visscores(2,:))
-    
-    dataBase(subj).stimorder_visscores =  stimorder_visscores(1,:);
+    if ~isempty(files)
+        for i=1:size(files,2)
+            % load visual scoring from excel-file
+            [num,txt,raw] = xlsread(fullfile(cfg.dir_visrate,filenames{files(i)}));
+            % remove first row with stimulation pairs (see txt)
+            raw(1,:) = [];
+            % remove first column with numbers of electrodes
+            raw(:,1) = [];
+            % remove NaN-values
+            raw(all(cellfun(@(x) any(isnan(x)),raw),2),:) = [];
+            raw = celltomat(raw);
+            BS_visscores(i,:,:) = raw;
+            stimorder_visscores(i,:,:) = txt(2:end,1);
+            chan_visscores(i,:,:) = txt(1,2:end)';
+        end
+        
+        if isequal(stimorder_visscores(1,:), stimorder_visscores(2,:)) && isequal(chan_visscores(1,:),chan_visscores(2,:))
+            
+            splitcell = cellfun( @(x) strsplit(x,'-'),stimorder_visscores(1,:),'UniformOutput',false);
+            
+            for n=1:size(splitcell,2)
+                stimp_visscores{n,1} = splitcell{n}{1};
+                stimp_visscores{n,2} = splitcell{n}{2};
+                
+                stimpnum_visscores(n,1) = find(strcmpi(splitcell{n}{1},squeeze(chan_visscores(1,:))));
+                stimpnum_visscores(n,2) = find(strcmpi(splitcell{n}{2},squeeze(chan_visscores(1,:))));
+            
+            end
+                
+            dataBase(subj).stimorder_visscores = stimorder_visscores(1,:)';
+            dataBase(subj).stimpnum_visscores = stimpnum_visscores;
+            dataBase(subj).stimp_visscores = stimp_visscores;
+            dataBase(subj).chan_visscores = chan_visscores(1,:)';
+        else
+            disp('ERROR: order of stimulus pairs in visual scores differs')
+        end
+        
+        dataBase(subj).BS_visscores = BS_visscores;
     else
-        disp('ERROR: order of stimulus pairs in visual scores differs')
+        disp('No visual scores for this patient')
     end
-    
-    dataBase(subj).BS_visscores = BS_visscores;
-    
 end
 
 disp('All visual scores are loaded')
@@ -64,75 +85,66 @@ disp('All visual scores are loaded')
 cfg.dir_ERSP = '/Fridge/users/dorien/derivatives/TFSPES/';
 
 for subj = 1:size(cfg.sub_labels,2)
-    
-    D = dir(fullfile(cfg.dir_ERSP, dataBase(subj).sub_label,...
-        dataBase(subj).ses_label))
-    
-    dataBase(subj).run_label  = D(contains({D(:).name},'run')).name;
-    
+        
     dataBase(subj).ERSP = load(fullfile(cfg.dir_ERSP, dataBase(subj).sub_label,...
         dataBase(subj).ses_label,dataBase(subj).run_label,...
         [dataBase(subj).sub_label, '_',dataBase(subj).ses_label,'_' dataBase(subj).task_label,...
         '_', dataBase(subj).run_label,'_ERSP.mat']));
 end
 
-% load Output_PAT_119
-% load times
-% load BS_score_PAT119_Dorien.mat
-% load BS_score_PAT119_Michelle.mat
-% 
-% % Load data from mstimefspes_test PAT130
-% load Output_PAT_130
-% load BS_score_PAT130_Dorien.mat
-% load BS_score_PAT130_Michelle.mat
-% 
-% % Load data from mstimefspes_test PAT126
-% load Output_PAT_126
-% load BS_score_PAT126_Dorien.mat
-% load BS_score_PAT126_Michelle.mat
-% allERSP2_126(1:22,:)=[];                    % file contains a SPES session that was not finished, so remove
-% stimpchan_126(1:22,:)=[];
+disp('All ERSPs are loaded')
 
-%%
+%% train SVM model with ERSPs from three patients: RESP0607, RESP0638, RESP0676
+
 ThU = 5:0.5:8;  % range upper threshold hysteresis
 ThL = 2:0.5:4;  % range lower threshold hysteresis
 
 kFolds = 10;     % number of folds
-N = numel([dataBase(5).ERSP(1).allERSPboot]); % CHECK of het werkt!!!
 
-bestSVM = struct('SVMModel', NaN, ...     % this is to store the best SVM
+% all images of patients in train set
+for i=1:size(cfg.train,2)
+    n(i) = numel([dataBase(i).ERSP.allERSPboot]);
+end
+N = sum(n);
+
+bestmodel.SVM = struct('SVMModel', NaN, ...     % this is to store the best SVM
     'C', NaN, 'ThL', NaN, 'ThU', NaN, 'Score', Inf);
 
+% randomly assign which images are left out in each fold (for cross validation)
 kIdx = crossvalind('Kfold',N, kFolds); % N is the total number of figures
 tic
 
 for k = 1:kFolds
     % forward feature selection starts   
     
-    bestThUScore = inf;
-    bestThUCombo = struct('SVM', NaN,'ThU', NaN, 'ThL', NaN, 'C', NaN);
+    bestmodel.ThUScore = inf;
+    bestmodel.ThUCombo = struct('SVM', NaN,'ThU', NaN, 'ThL', NaN, 'C', NaN);
     for p = 1:length(ThU)
-        bestThLScore = inf;
-        bestThLCombo = struct('SVM', NaN, 'ThL', NaN, 'C', NaN);
+        bestmodel.ThLScore = inf;
+        bestmodel.ThLCombo = struct('SVM', NaN, 'ThL', NaN, 'C', NaN);
         for q = 1:length(ThL)
-            clear S1 D1 A1 S2 D2 A2 S3 D3 A3 A D S trainData trainTarg testData testTarg
-            [S1,D1,A1] = getfeaturesTrain(times, allERSP2_119, ThL(q), ThU(p), BS_score_PAT119_Michelle, BS_score_PAT119_Dorien, stimpchan_119);
-            [S2,D2,A2] = getfeaturesTrain(times, allERSP2_130, ThL(q), ThU(p), BS_score_PAT130_Michelle, BS_score_PAT130_Dorien, stimpchan_130);
-            [S3,D3,A3] = getfeaturesTrain(times, allERSP2_126, ThL(q), ThU(p), BS_score_PAT126_Michelle, BS_score_PAT126_Dorien, stimpchan_126);
+            clear S D A S_all D_all A_all trainData trainTarg testData testTarg
             
-            A=[A1 A2 A3];
-            D=[D1 D2 D3];
-            S=[S1 S2 S3];
+            for i=1:size(cfg.train,2)
+                        
+                [S{i},D{i},A{i}] = getfeaturesTrain(dataBase(cfg.train(i)),ThL(q), ThU(p));
+                
+            end
             
+            % vector [3*allERSPimages x 2]
+            S_all = vertcat(S{:});
+            D_all = vertcat(D{:});
+            A_all = vertcat(A{:});
+                        
 %feature scaling; mean normalization % dit hoeft niet want zit al in
 %fitcsvm
 %             A = (A-mean(A))/std(A);           
 %             D = (D-mean(D))/std(D);
             
             %%Support vector machine
-            X(:,1) = A';                    % store area and duration in X
-            X(:,2) = D';
-            Y=S';                           % store true label in Y
+            X(:,1:2) = A_all;                    % store area and duration in X
+            X(:,3:4) = D_all;
+            Y=S_all;                           % store true label in Y
             
             trainData = X(kIdx~=k, :);      % data of 1 of the k folds
             trainTarg = Y(kIdx~=k);
@@ -140,54 +152,76 @@ for k = 1:kFolds
             testTarg = Y(kIdx==k);
             
             % this is the grid search for the BoxConstraint
-            bestCScore = inf;
-            bestC = NaN;
-            bestCSVM = NaN;
+            bestmodel.CScore = inf;
+            bestmodel.C = NaN;
+            bestmodel.CSVM = NaN;
             gridC = 2.^(-4:2:8);
             for C = gridC
                 anSVMModel = fitcsvm(trainData, trainTarg, ...
                     'Standardize',true,'ClassNames',{'0','1'},'KernelFunction', 'RBF', 'KernelScale', 'auto', ...
                     'Prior','empirical','Cost',[0 1;4 0],'BoxConstraint', C);
                 L = loss(anSVMModel,testData, testTarg);
-                if L < bestCScore        % saving best SVM on parameter
-                    bestCScore = L;      % selection
-                    bestC = C;
-                    bestCSVM = anSVMModel;
+                if L < bestmodel.CScore        % saving best SVM on parameter
+                    bestmodel.CScore = L;      % selection
+                    bestmodel.C = C;
+                    bestmodel.CSVM = anSVMModel;
                 end
             end
             
             % saving the best SVM on lower threshold
-            if (bestCScore < bestThLScore) || ...
-                    (bestCScore == bestThLScore)
-                bestThLScore = bestCScore;
-                bestThLCombo.SVM = bestCSVM;
-                bestThLCombo.ThL = ThL(q);
-                bestThLCombo.C = bestC;
+            if (bestmodel.CScore < bestmodel.ThLScore) || ...
+                    (bestmodel.CScore == bestmodel.ThLScore)
+                bestmodel.ThLScore = bestmodel.CScore;
+                bestmodel.ThLCombo.SVM = bestmodel.CSVM;
+                bestmodel.ThLCombo.ThL = ThL(q);
+                bestmodel.ThLCombo.C = bestmodel.C;
             end
             
             
         end
         
         % saving the best SVM on upper threshold
-        if (bestThLScore < bestThUScore) || ...
-                (bestThLScore == bestThUScore)
-            bestThUScore = bestThLScore;
-            bestThUCombo.SVM = bestThLCombo.SVM;
-            bestThUCombo.ThL = ThL(q);
-            bestThUCombo.ThU = ThU(p);
-            bestThUCombo.C = bestC;
+        if (bestmodel.ThLScore < bestmodel.ThUScore) || ...
+                (bestmodel.ThLScore == bestmodel.ThUScore)
+            bestmodel.ThUScore = bestmodel.ThLScore;
+            bestmodel.ThUCombo.SVM = bestmodel.ThLCombo.SVM;
+            bestmodel.ThUCombo.ThL = ThL(q);
+            bestmodel.ThUCombo.ThU = ThU(p);
+            bestmodel.ThUCombo.C = bestmodel.C;
         end
            
     end
     
     % saving the best SVM over all folds
-    if bestThUScore < bestSVM.Score
-        bestSVM.SVMModel = bestThUCombo.SVM;
-        bestSVM.C = bestThUCombo.C;
-        bestSVM.ThL = bestThUCombo.ThL;
-        bestSVM.ThU = bestThUCombo.ThU;
-        bestSVM.Score = bestThUScore
+    if bestmodel.ThUScore < bestmodel.SVM.Score
+        bestmodel.SVM.SVMModel = bestmodel.ThUCombo.SVM;
+        bestmodel.SVM.C = bestmodel.ThUCombo.C;
+        bestmodel.SVM.ThL = bestmodel.ThUCombo.ThL;
+        bestmodel.SVM.ThU = bestmodel.ThUCombo.ThU;
+        bestmodel.SVM.Score = bestmodel.ThUScore;
     end
 end
 
 toc
+
+%% test SVM model with one patient: RESP0690
+
+detectPowSup(dataBase,cfg)
+
+
+%% check detected ERSPs
+
+subj = 1;
+stimps = 1:size(dataBase(subj).cc_epoch_sorted,3);
+chans = dataBase(subj).soz;%1:size(dataBase(1).cc_epoch_sorted,1);
+
+dataBase = visualRating_tfspes(dataBase,stimps, chans);
+checked = dataBase(1).ERSP.checked;
+
+output = fullfile(cfg.TFSPESpath,dataBase(subj).sub_label,dataBase(subj).ses_label,...
+                        ['task-',dataBase(subj).task_label,'_',dataBase(subj).run_label]);
+
+filename = ['/sub-' dataBase(subj).sub_label,'_' dataBase(subj).ses_label,...
+                        '_task-', dataBase(subj).task_label,'_',dataBase(subj).run_label '_ERSP.mat'];     
+                    
+save([output,filename],'checked','-append')
