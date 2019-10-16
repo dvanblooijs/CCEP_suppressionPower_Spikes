@@ -3,7 +3,7 @@
 % made BIDS compatible by Dorien van Blooijs
 % september 2019
 
-function [S,D,A]=getfeaturesTrain(subject, ThL, ThU)
+function [D,A,Dmat,Amat] = getfeaturesTrain(subject, ThL, ThU)
 
 t = subject.ERSP.times;
 %%Divide hys in pre- and post stimulation
@@ -11,15 +11,14 @@ time(1,:) = t<0;
 time(2,:) = t>0;
 
 allERSP = subject.ERSP.allERSPboot;
-BS_score = subject.BS_visscores;
 stimpchan = subject.ERSP.cc_stimsets;
 
 %         Ts=t(2)-t(1);
 %         Fs=1/Ts;
 Ts = median(unique(diff(t)))/1000; % /1000 to convert from ms to s
 Fs = 1/Ts;
-
-ii=1;
+Dmat = cell(2,1);
+Amat = cell(2,1);
 
 for stimpair=1:size(allERSP,1)                            % for each stimulation pair
     for chan=1:size(allERSP,2)                        % for each recording electrode
@@ -35,11 +34,11 @@ for stimpair=1:size(allERSP,1)                            % for each stimulation
         t1=ThL;                                          % Lower threshold
         t2=ThU;                                          % Upper threshold
         conn=8;                                             % Connectivity
-        [tri,hys]=hysteresis3d(ERSP2,t1,t2,conn);
-        allhys{stimpair,chan}= hys;
-        alltri{stimpair,chan}= tri;
+        [~,hys]=hysteresis3d(ERSP2,t1,t2,conn);
+%         allhys{stimpair,chan}= hys;
+%         alltri{stimpair,chan}= tri;
         
-        
+        hys_div = NaN(2,size(ERSP2,1),size(ERSP2,2)/2);
         for win=1:2 % pre and post stimulation
             hys_div(win,:,:) = hys(:,time(win,:));
             
@@ -54,43 +53,24 @@ for stimpair=1:size(allERSP,1)                            % for each stimulation
                 
             end
             statsPrePost(win).stats = stats;
-            
-            %Get stimulus pair in visual scoring
-            if isequal(subject.ERSP.ch,subject.chan_visscores)
-                if isequal(subject.ERSP.cc_stimsets,subject.stimpnum_visscores)
-                    stimp = stimpair;
-                else
-                    stimp = find(subject.ERSP.cc_stimsets(stimpair,1)==subject.stimpnum_visscores(:,1) & subject.ERSP.cc_stimsets(stimpair,2)==subject.stimpnum_visscores(:,2));
-                end
-            else
-                stimp =find(strcmpi([subject.ERSP.cc_stimchans{stimpair,1},'-',subject.ERSP.cc_stimchans{stimpair,2}],subject.stimorder_visscores));
-            end
-            
-            %Get indexes of similar scoring           
-            if BS_score(1,stimp,chan)==BS_score(2,stimp,chan)
-                S(ii,win) = BS_score(1,stimp,chan);
-            else
-                S(ii,win) = 0;
-            end
-            
+                      
             %%Get area and duration in a double
             l = stimpchan(stimpair,:);
             
             if chan==l(1) || chan==l(2)                   % don't take recording which is in stimulus pair
-                D(ii,win)=NaN;
-                A(ii,win)=NaN;
+                Dmat{win}(stimpair,chan) = NaN;
+                Amat{win}(stimpair,chan) = NaN;
                 
             elseif isempty(stats)
-                D(ii,win)=0;
-                A(ii,win)=0;
+                Dmat{win}(stimpair,chan) = 0;
+                Amat{win}(stimpair,chan) = 0;
                 
             else
                 [val,idx] = max([stats.Area]);
-                D(ii,win)=stats(idx).duration;
-                A(ii,win)=val;
+                Dmat{win}(stimpair,chan) = stats(idx).duration;
+                Amat{win}(stimpair,chan) = val;
             end
         end
-        ii=ii+1;
         
         allstats{stimpair,chan} = statsPrePost;
 
@@ -98,3 +78,7 @@ for stimpair=1:size(allERSP,1)                            % for each stimulation
         
     end
 end
+
+D = [reshape(Dmat{1},numel(Dmat{1}),1),reshape(Dmat{2},numel(Dmat{2}),1)];
+A = [reshape(Amat{1},numel(Amat{1}),1),reshape(Amat{2},numel(Amat{2}),1)];
+
