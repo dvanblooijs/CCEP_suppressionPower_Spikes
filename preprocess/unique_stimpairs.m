@@ -36,7 +36,7 @@ if any(diff(n) ~= 0)
     [cc_stimsets,~,IC] = unique(stimelek,'rows');
     n = histcounts(IC,'BinMethod','integers');
     if any(diff(n) ~= 0)
-        fprintf('ERROR: %s some stimulation pairs are stimulated less/more than all others\n',dataBase(subj).subj)
+        fprintf('ERROR: %s some stimulation pairs are stimulated less/more than all others\n',dataBase(subj).sub_label)
     end
     
 end

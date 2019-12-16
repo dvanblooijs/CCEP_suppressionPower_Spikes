@@ -14,6 +14,8 @@ cfg.sub_labels = { 'sub-RESP0401', 'sub-RESP0435', 'sub-RESP0458', 'sub-RESP0478
     'sub-RESP0574', 'sub-RESP0589', 'sub-RESP0608', 'sub-RESP0621', 'sub-RESP0699'};
 cfg.ses_label = 'ses-1';
 cfg.task_label = 'task-SPESclin';
+cfg.run_label = {'run-031153','run-051138','run-011714','run-021549','run-031740',...
+    'run-021358','run-021050','run-021057','run-021147','run-031717'};
 cfg.ERpath = '/Fridge/users/dorien/derivatives/BB_article/CCEPderiv';
 
 %% load ECoGs with SPES from 10 patients
@@ -210,9 +212,13 @@ for subj = 1:size(dataBase,2)
     dataBase(subj).spikes.Pharmat = Pharmat;
     dataBase(subj).spikes.Pharmatall = Pharmatall;
     
-    filename = ['/home/dorien/local_drives/CCEPderiv/' dataBase(subj).subj, '_Mvalues'];
+    filename = ['/Fridge/users/dorien/derivatives/BB_article/CCEPderiv/' dataBase(subj).sub_label, '/',dataBase(subj).ses_label, '/',...
+        dataBase(subj).sub_label,'_', dataBase(subj).ses_label, '_', dataBase(subj).task_label,'_', dataBase(subj).run_label,'_Mvalues.mat'];
     
-    spikespat.subject = dataBase(subj).subj;
+    spikespat.sub_label = dataBase(subj).sub_label;
+    spikespat.ses_label = dataBase(subj).ses_label;
+    spikespat.run_label = dataBase(subj).run_label;
+    spikespat.task_label = dataBase(subj).task_label;
     spikespat.spikesdet = dataBase(subj).spikes;
     spikespat.IEDchan = dataBase(subj).IEDchan;
     spikespat.IEDch = dataBase(subj).IEDch;

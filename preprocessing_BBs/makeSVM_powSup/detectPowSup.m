@@ -15,7 +15,7 @@ for subj = 1:size(dataBase,2)
     % addpath(genpath('/Users/michelle/Google Drive/M3/Onderzoek/Matlab/Data'))
     
     %change data to patient you want to detect SP for
-    load([cfg.inputERSP, dataBase(subj).subj, '_ERSP'])
+    load([cfg.inputERSP, dataBase(subj).sub_label, '_ERSP'])
     
     [D,A] = getfeatures(times, freqs, ERSP, 4, 5, dataBase(subj).cc_stimsets);        % Use 4 and 5 as lower and upper threshold hysteresis (optimum decided via cross-validation)
     

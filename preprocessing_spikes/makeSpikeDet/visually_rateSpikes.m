@@ -1,6 +1,6 @@
 %% visually score spikes
 close all
-
+subj = 10;
 numplots = size(dataBase(subj).IEDch,2);
 htsub = 0.9/numplots; %0.11%0.9/numplots;%0.07;%0.9/numplots;
 startsub = 0.98-htsub:-htsub:0.05;%0.95-htsub:-htsub:0.05; %0.8492:-0.1055:0.1103;%0.05:0.11:0.95;%0.05:htsub:0.95;%0.95-htsub:-htsub:0.05;
@@ -18,7 +18,7 @@ data_down = data_down_temp';
 fs_down = round(fs/downsamp);
 
 time_down = 1/fs_down:1/fs_down:size(data_down,2)/fs_down;
-vis_spikes = struct;
+% vis_spikes = struct;
 x_all = [];
 y_all = [];
 
@@ -31,7 +31,7 @@ h.Units = 'centimeters';
 h.Position(4); % height of figure
 sizesubplot = h.Position(4)*(htsub-0.02) ; %height of each subplot
 
-for t=1 :3%:size(win_start,2)
+for t=1 :size(win_start,2)
     
     yaxis = yscale* sizesubplot;
     ymin = -1*yaxis/2;
@@ -82,10 +82,11 @@ for t=1 :3%:size(win_start,2)
             % find x-position of nearby peak
             locsamp = sampnum-round(0.1*fs_down)+locs-1;
             
-            if exist('vis_spikes_all','var')
-                if ismembertol(time_down(locsamp),vis_spikes_all(elec).xall,0.1,'DataScale',1)
-                    [~,locB] = ismembertol(time_down(locsamp),vis_spikes_all(elec).xall,0.1,'DataScale',1)
-                    plot(x(elec,locB),y(elec,locB),'r*'); drawnow;
+%             if exist('vis_spikes_all','var')
+                if ismembertol(time_down(locsamp),x(elec,:),0.1,'DataScale',1)
+                    [~,locB] = ismembertol(time_down(locsamp),x(elec,:),0.1,'DataScale',1)
+                    hold on
+                    plot(x(elec,locB),y(elec,locB),'wo'); drawnow;
                     x(elec,locB) = 0;
                     y(elec,locB) = 0;
                     
@@ -97,13 +98,13 @@ for t=1 :3%:size(win_start,2)
                     plot(x(elec,n),y(elec,n),'ro'); drawnow;
                     n=n+1;
                 end
-            else
-                x(elec,n) = time_down(locsamp);
-                y(elec,n) = data_down(dataBase(subj).IEDch(elec),locsamp);
-                hold on
-                plot(x(elec,n),y(elec,n),'ro'); drawnow;
-                n=n+1;
-            end
+%             else
+%                 x(elec,n) = time_down(locsamp);
+%                 y(elec,n) = data_down(dataBase(subj).IEDch(elec),locsamp);
+%                 hold on
+%                 plot(x(elec,n),y(elec,n),'ro'); drawnow;
+%                 n=n+1;
+%             end
         elseif w==1
             currkey = get(gcf,'CurrentCharacter');
             
@@ -116,6 +117,24 @@ for t=1 :3%:size(win_start,2)
 %     vis_spikes(t).y = y;
     
 end
+
+%% save all annotated spikes
+
+folderName = '/Fridge/users/dorien/derivatives/BB_article/IEDs/';
+fileName = [dataBase(subj).sub_label, '_', dataBase(subj).ses_label, '_',...
+    dataBase(subj).task_label, '_', dataBase(subj).run_label, '_visIEDs.mat'];
+
+sub_label = dataBase(subj).sub_label;
+ses_label = dataBase(subj).ses_label;
+task_label = dataBase(subj).task_label;
+run_label = dataBase(subj).run_label;
+IEDch = dataBase(subj).IEDch;
+IEDchan = dataBase(subj).IEDchan;
+
+save([folderName, fileName],'sub_label','ses_label','task_label','run_label',...
+    'IEDch','IEDchan','x_all','y_all')
+
+disp('saved')
 
 %% put all annotated spikes into one array for each electrode
 

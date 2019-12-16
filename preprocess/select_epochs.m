@@ -4,10 +4,11 @@ epoch_length = cfg.epoch_length;
 epoch_prestim = cfg.epoch_prestim;
 
 for subj = 1:size(dataBase,2)
-    tt = round(epoch_length*dataBase(subj).ccep_header.Fs);
+    t = round(epoch_length*dataBase(subj).ccep_header.Fs);
     
     % allocation
-    cc_epoch_sorted = NaN(size(dataBase(subj).data,1),dataBase(subj).max_stim,size(dataBase(subj).cc_stimsets,1),tt);
+    cc_epoch_sorted = NaN(size(dataBase(subj).data,1),dataBase(subj).max_stim,size(dataBase(subj).cc_stimsets,1),t);
+    tt_epoch_sorted = NaN(dataBase(subj).max_stim,size(dataBase(subj).cc_stimsets,1),t); % samplenumbers for each epoch
     
     for elec = 1:size(dataBase(subj).data,1) % for all channels
         for ll = 1:length(dataBase(subj).cc_stimsets) % for all epochs with >4 stimuli
@@ -27,6 +28,7 @@ for subj = 1:size(dataBase,2)
             
             for n=1:events
                 cc_epoch_sorted(elec,n,ll,:) = dataBase(subj).data(elec,dataBase(subj).tb_events.sample_start(eventnum(n))-round(epoch_prestim*dataBase(subj).ccep_header.Fs)+1:dataBase(subj).tb_events.sample_start(eventnum(n))+round((epoch_length-epoch_prestim)*dataBase(subj).ccep_header.Fs));
+                tt_epoch_sorted(n,ll,:) = dataBase(subj).tb_events.sample_start(eventnum(n))-round(epoch_prestim*dataBase(subj).ccep_header.Fs)+1:dataBase(subj).tb_events.sample_start(eventnum(n))+round((epoch_length-epoch_prestim)*dataBase(subj).ccep_header.Fs);
             end
         end
     end
@@ -34,9 +36,10 @@ for subj = 1:size(dataBase,2)
     cc_epoch_sorted_avg = squeeze(nanmean(cc_epoch_sorted,2));
     
     dataBase(subj).cc_epoch_sorted = cc_epoch_sorted;
+    dataBase(subj).tt_epoch_sorted = tt_epoch_sorted;
     dataBase(subj).cc_epoch_sorted_avg = cc_epoch_sorted_avg;
     
-    fprintf('...%s has been epoched and averaged... \n',dataBase(subj).subj)
+    fprintf('...%s has been epoched and averaged... \n',dataBase(subj).sub_label)
 end
 
 fprintf('Data of all subjects have been epoched and averaged\n')
