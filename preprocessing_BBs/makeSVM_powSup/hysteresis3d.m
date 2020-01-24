@@ -43,7 +43,7 @@ elseif nargin==3
         disp('conn set at 4 connectivies (number of neighbors)')
         conn=4;
     end
-    if numel(size(img))==3; 
+    if numel(size(img))==3
         disp('img=3D')
         disp('conn set at 6 connectivies (number of neighbors)')
         conn=6;
@@ -56,12 +56,12 @@ if t1>t2    % swap values if t1>t2
 	t1=t2; 
 	t2=tmp;
 end
-% minv=min(img(:));                % min image intensity value
-% maxv=max(img(:));                % max image intensity value
-% t1v=t1*(maxv-minv)+minv;
-% t2v=t2*(maxv-minv)+minv;
-t1v = t1;
-t2v = t2;
+minv=min(img(:));                % min image intensity value
+maxv=max(img(:));                % max image intensity value
+t1v=t1*(maxv-minv)+minv;
+t2v=t2*(maxv-minv)+minv;
+% t1v = t1;
+% t2v = t2;
 
 %% trinarisation
 tri=zeros(size(img));

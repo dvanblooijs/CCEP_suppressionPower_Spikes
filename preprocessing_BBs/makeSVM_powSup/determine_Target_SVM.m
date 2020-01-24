@@ -1,10 +1,14 @@
-function [Y_all, Y_conc, Y] = determine_Target_SVM(dataBase,cfg)
+% this function uses the visual scores to make TargetValues (Y).
+% 1 = power suppression was scored
+% 0 = no power suppression was scored
+
+function [Y_alltrain,Y_alltest, Y_conc, Y] = determine_Target_SVM(dataBase,cfg)
 
 % pre-allocation
-S = cell(size(cfg.train,2),1);
-Y_conc = cell(size(cfg.train,2),1);
+S = cell(size(cfg.sub_labels,2),1);
+Y_conc = cell(size(cfg.sub_labels,2),1);
 
-for subj=1:size(cfg.train,2)
+for subj=1:size(cfg.sub_labels,2)
     
     for stimpair = 1:size(dataBase(subj).ERSP.allERSPboot,1)
         for chan = 1:size(dataBase(subj).ERSP.allERSPboot,2)
@@ -43,6 +47,7 @@ for subj=1:size(cfg.train,2)
     Y_conc{subj} = reshape(S{subj},numel(S{subj}),1);
 end
 
-Y_all = vertcat(Y_conc{:});                           % store true label in Y
+Y_alltrain = vertcat(Y_conc{cfg.train});                           % store true label in Y
+Y_alltest = vertcat(Y_conc{cfg.test});                           % store true label in Y
 
 end

@@ -3,14 +3,20 @@
 % made BIDS compatible by Dorien van Blooijs
 % september 2019
 
-function [D,A,Dmat,Amat] = getfeaturesTrain(subject, ThL, ThU)
+function [D,A,Dmat,Amat] = getfeaturesTrain(subject, ThL, ThU,trainPar)
 
 t = subject.ERSP.times;
 %%Divide hys in pre- and post stimulation
 time(1,:) = t<0;
 time(2,:) = t>0;
 
-allERSP = subject.ERSP.allERSPboot;
+if strcmp(trainPar.boot,'yes')
+    allERSP = subject.ERSP.allERSPboot;
+elseif strcmp(trainPar.boot,'no')
+        allERSP = subject.ERSP.allERSP;
+else
+    error('bootstrapping on/of is not defined')
+end
 stimpchan = subject.ERSP.cc_stimsets;
 
 %         Ts=t(2)-t(1);
@@ -74,7 +80,7 @@ for stimpair=1:size(allERSP,1)                            % for each stimulation
         
         allstats{stimpair,chan} = statsPrePost;
 
-        fprintf('Stimpair %d of %d, channel %d of %d\n',stimpair, size(allERSP,1),chan,size(allERSP,2))
+%         fprintf('Stimpair %d of %d, channel %d of %d\n',stimpair, size(allERSP,1),chan,size(allERSP,2))
         
     end
 end
