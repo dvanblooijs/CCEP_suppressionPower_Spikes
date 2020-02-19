@@ -20,7 +20,7 @@ for subj=1:size(cfg.sub_labels,2)
                     stimp = stimpair;
                     channum = chan;
                 else
-                    if stimpair == 1
+                    if stimpair == 1 && chan == 1
                         fprintf('%s: Channels are equal, but stimsets are not, but the correct location was found \n',dataBase(subj).sub_label)
                     end
                     stimp = find(dataBase(subj).ERSP.cc_stimsets(stimpair,1)==dataBase(subj).vis_scores.stimpnum(:,1) ...
