@@ -4,6 +4,38 @@
 % made BIDS compatible by: Dorien van Blooijs
 % date: July 2019
 
+%% settings for constructing SVM
+config_makeSVM_TFSPES
+
+%% Load ERSP-data
+
+%pre-allocation
+dataBase = struct([]);
+
+for subj = 1:size(cfg.sub_labels,2)
+    
+    dataBase(subj).sub_label = cfg.sub_labels{subj};
+    dataBase(subj).ses_label = cfg.ses_label;
+    dataBase(subj).task_label = cfg.task_label;
+    dataBase(subj).run_label = cfg.run_label{subj};
+    
+    
+    dataBase(subj).ERSP = load(fullfile(cfg.dir_ERSP, dataBase(subj).sub_label,...
+        dataBase(subj).ses_label,dataBase(subj).run_label,...
+        [dataBase(subj).sub_label, '_',dataBase(subj).ses_label,'_' dataBase(subj).task_label,...
+        '_', dataBase(subj).run_label,'_ERSP.mat']));
+end
+
+disp('All ERSPs are loaded')
+
+%% load visual ratings
+
+dataBase = load_visual_BBs(dataBase,cfg);
+disp('All visual scores are loaded')
+
+%% compare visual ratings from 2 scorers
+
+% something with kappa?
 
 %% determine true labels for fitcsvm: y
 
@@ -13,7 +45,7 @@
 
 % distribution_ERSPval(cfg,dataBase)
 
-%% step 1a: train thresholds hysteresis
+%% step 1: train thresholds hysteresis : this takes a few hours
 % we vary the thresholds ThU and ThL to find the best thresholds for
 % detecting BBs in each patient. We then make a heatmap to find a threshold
 % that suits all three patients.
@@ -21,7 +53,7 @@
 trainPar.ThU = 0.1:0.1:0.9;  % range upper threshold hysteresis
 trainPar.ThL = 0.1:0.1:0.9;  % range lower threshold hysteresis
 trainPar.C = 2.^(-4:2:8); % range of BoxConstraint in svm model
-trainPar.boot = input('Use bootstrapped ERSP [yes] or ERSP without bootstrapping [no]:', 's');
+trainPar.boot = input('Use bootstrapped ERSP [yes] or ERSP without bootstrapping [no]: ', 's');
 
 [train_threshold,train_threshold_all] = trainSVM_PowSup(cfg,dataBase,trainPar,Y_conc);
 
@@ -35,6 +67,7 @@ heatmap_trainSVM(cfg,dataBase,train_threshold,trainPar,mode,par1,par2)
 heatmap_trainSVM(cfg,dataBase,train_threshold_all,trainPar,mode,par1,par2)
 
 %% find optimal values for each individual patient and all patients in train dataset combined
+
 clc
 trainPar.mode = input('Find optimal for each patient [optimal], or define an option yourself [option]: ','s');
 
@@ -59,7 +92,6 @@ else
     optTrainPar_SVM(cfg,dataBase,trainPar,train_threshold_all,1)
 end
 
-
 %% step 2: fit SVM with optimal thresholds for hysteresis
 % we now train an SVMmodel with optimal thresholds as determined in step 1
 
@@ -79,7 +111,7 @@ N = sum(n);
 D = cell(size(cfg.train,2),1); A = cell(size(cfg.train,2),1);
 for i=1:size(cfg.train,2)
     
-    [D{i},A{i}] = getfeaturesTrain(dataBase(cfg.train(i)),ThL_opt, ThU_opt);
+    [D{i},A{i}] = getfeaturesTrain(dataBase(cfg.train(i)),ThL_opt, ThU_opt,trainPar);
     
 end
 
@@ -92,11 +124,18 @@ X = [];
 X(:,1:2) = A_all;                    % store area and duration in X
 X(:,3:4) = D_all;
 
+X_train = X;
 % optimal SVM model
-SVMModel = fitcsvm(X, Y_alltrain, ...
+SVMModel = fitcsvm(X_train, Y_alltrain, ...
     'Standardize',true,'ClassNames',{'0','1'},'KernelFunction', 'RBF', 'KernelScale', 'auto', ...
-    'Prior','empirical','Cost',[0 1;4 0],'BoxConstraint', C_opt,'CrossVal','on');
+    'Cost',[0 1;2 0],'BoxConstraint', C_opt);
 
+%     'Prior','empirical','BoxConstraint', C_opt);
+%     'Prior','empirical','Cost',[0 1;4 0],'BoxConstraint', C_opt);
+resubLoss(SVMModel)
+
+CVModel = crossval(SVMModel);
+kfoldLoss(CVModel)
 
 % save SVMmodel
 pathname = '/Fridge/users/dorien/derivatives/BB_article/';
@@ -107,7 +146,7 @@ save(fullfile(pathname,filename),'SVMModel','trainPar')
 
 % detectPowSup(dataBase,cfg)
 
-[D_all,A_all] = getfeaturesTrain(dataBase(cfg.test),ThL_opt, ThU_opt);
+[D_all,A_all] = getfeaturesTrain(dataBase(cfg.test),ThL_opt, ThU_opt,trainPar);
 
 % X-values in Support vector machine
 X = [];
@@ -127,13 +166,11 @@ FN = numel(find(label == 0 & valTarg == 1));
 if sum([TP;FP;TN;FN]) ~= size(valTarg,1)
     error('Number of TP, FP, TN, FN does not add up to all labels')
 else
-    sens(k) = TP/(TP+FN);
-    spec(k) = TN/(TN+FP);
-    prec(k) = TP/(TP+FP);
-    F(k) = 2 * (prec(k) * sens(k))/(prec(k) + sens(k));
+    sens = TP/(TP+FN);
+    spec = TN/(TN+FP);
+    prec = TP/(TP+FP);
+    F = 2 * (prec * sens)/(prec + sens);
 end
-
-
 
 %% check detected ERSPs
 
