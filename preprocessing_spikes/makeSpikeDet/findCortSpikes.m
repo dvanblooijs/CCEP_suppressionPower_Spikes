@@ -102,6 +102,7 @@ disp('The Mahalanobis distance is calculated!') % --> vector = [channels x times
 % gemiddeld 45 ms ==
 % clear Mrange
 
+disp('Calculating parameter estimates takes some time')
 for chan=1:size(filt_data,1)
     
     Pharmat(chan,:) = gevfit(M(chan,:)); % returns 95% confidence intervals for parameter estimates
@@ -109,6 +110,7 @@ end
 
 Pharmatall = gevfit(M(:));
 
+disp('Calculation is done!')
 
 %     Mthresh(j) = Pharmat(3) +SD*Pharmat(2); %2SD
 %     
