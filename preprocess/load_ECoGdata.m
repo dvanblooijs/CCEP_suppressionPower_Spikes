@@ -75,7 +75,7 @@ for i=1:size(sub_labels,2)
     tb_channels = tb_channels(log_ch_incl,:);
     ch_incl = tb_channels.name;
     
-    data = -1*ccep_data(log_ch_incl,:);
+    data = ccep_data(log_ch_incl,:);
     
     dataBase(i).sub_label = sub_labels{i};
     dataBase(i).ses_label = ses_label;
