@@ -27,13 +27,13 @@ dataBase = load_ECoGdata(cfg);
 % % sort stimulation pairs
 % cfg.dir = 'no'; % if you want to take negative/positive stimulation into account
 % cfg.amp = 'no'; % if you want to take stimulation current into account
-% 
+%
 % % select epochs and average
 % cfg.epoch_length = 4; % in seconds, -2:2
 % cfg.epoch_prestim = 2;
-% 
+%
 % dataBase = preprocess_ECoG_ccep(dataBase,cfg);
-% 
+%
 % disp('All ECoGs are preprocessed')
 
 %% determine channels with IEDs
@@ -47,7 +47,7 @@ for subj = 1:size(dataBase,2)
                 IEDch(chan) = find(strcmpi(dataBase(subj).ch,IEDchan{chan})==1);
             end
             
-        case 'sub-RESP0435'
+        case 'sub-RESP0435' % not really convincing spikes...
             IEDchan = {'fh13','fh14','fh15','fh16','fh20','fh21','fh22','fh23',...
                 'fh24','fh26','fh27','fh28','fh30','fh31','fl03','fl04','fl05','fl12','fl13'};% FH13-16, 20-24, 26-28,30,31, FL3-5,12,13
             IEDch = NaN(size(IEDchan));
@@ -69,7 +69,7 @@ for subj = 1:size(dataBase,2)
                 IEDch(chan) = find(strcmpi(dataBase(subj).ch,IEDchan{chan})==1);
             end
             
-        case 'sub-RESP0502'
+        case 'sub-RESP0502' %% difficult to differentiate from mu
             IEDchan = {'t19','t20','t21','t22','t23','t28','t29','t30','t31'};% T19-23, 28-31
             IEDch = NaN(size(IEDchan));
             for chan =1:size(IEDchan,2)
@@ -110,7 +110,7 @@ for subj = 1:size(dataBase,2)
             IEDch = NaN(size(IEDchan));
             for chan =1:size(IEDchan,2)
                 IEDch(chan) = find(strcmpi(dataBase(subj).ch,IEDchan{chan})==1);
-            end            
+            end
     end
     
     dataBase(subj).IEDch = IEDch;
@@ -184,19 +184,19 @@ win_start = 0:15:10*60-15;
 win_stop = 15:15:10*60;
 
 for t=1:size(win_start,2)
-figure(1)%('units','normalized','position',[0.01 0.01 0.9 0.9]);
-
-hold on
-for chan = 1%:size(dataBase(subj).IEDch,2)
-    plot(1/fs:1/fs:size(dataBase(subj).data_noStimArt,2)/fs,dataBase(subj).data_noStimArt(dataBase(subj).IEDch(chan),:))
-end
-hold off
-xlim([win_start(t),win_stop(t)])
-
-set(gcf,'units','normalized','OuterPosition',[0.01 0.01 0.9 0.9],...
-    'InnerPosition',[0.05 0.05 0.85 0.85]);
-pause
-
+    figure(1)%('units','normalized','position',[0.01 0.01 0.9 0.9]);
+    
+    hold on
+    for chan = 1%:size(dataBase(subj).IEDch,2)
+        plot(1/fs:1/fs:size(dataBase(subj).data_noStimArt,2)/fs,dataBase(subj).data_noStimArt(dataBase(subj).IEDch(chan),:))
+    end
+    hold off
+    xlim([win_start(t),win_stop(t)])
+    
+    set(gcf,'units','normalized','OuterPosition',[0.01 0.01 0.9 0.9],...
+        'InnerPosition',[0.05 0.05 0.85 0.85]);
+    pause
+    
 end
 
 %% detect spikes - only in IED channels
@@ -269,7 +269,7 @@ for elec = 1:size(dataBase(subj).IEDch,2)
         %         plot(locSpikes(locnum)/ccep_header.Fs,...
         %             dataBase(subj).data_IED(elec,locSpikes(locnum)),'*b')
         %         hold off
-                
+        
         ax = gca;
         h = gcf;
         h.PaperPosition = [-5 -5 20 10];
@@ -283,17 +283,17 @@ for elec = 1:size(dataBase(subj).IEDch,2)
         xall = [xall; round(x*ccep_header.Fs)];
         yall = [yall; y];
         
-%         str = input('Select other point in figure[y/n]: ','s');
-%         n=1;
-%         while strcmp(str,'n')
-%             str = input('Select other point in figure[y/n]: ','s');
-%             dcm = datacursormode;
-%             dcm.DisplayStyle = 'datatip';
-%             dcm.SnaptoDataVertex = 'on';
-%             s(n) = getCursorInfo(dcm);
-%             n=n+1;
-%         end
-
+        %         str = input('Select other point in figure[y/n]: ','s');
+        %         n=1;
+        %         while strcmp(str,'n')
+        %             str = input('Select other point in figure[y/n]: ','s');
+        %             dcm = datacursormode;
+        %             dcm.DisplayStyle = 'datatip';
+        %             dcm.SnaptoDataVertex = 'on';
+        %             s(n) = getCursorInfo(dcm);
+        %             n=n+1;
+        %         end
+        
     end
     
     visSpikes(elec).x = xall;
