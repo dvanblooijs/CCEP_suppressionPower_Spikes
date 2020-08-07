@@ -2,21 +2,16 @@
 % author: Dorien van Blooijs
 % date: September 2019
 
-addpath(genpath('git_rep/CCEP_suppressionPower_Spikes'))
-addpath(genpath('git_rep/eeglab/'))
-% addpath(genpath('git_rep/BasicCode_ECoG_DvB/'))
-% addpath(genpath('git_rep/REC2Stim/'))
-addpath('git_rep/fieldtrip/')
-ft_defaults
+clc
+clear
+cfg = setLocalDataPath(1);
 
 %% patient settings
-cfg.dataPath = '/Fridge/CCEP';
 % old database: PAT54, PAT78, PAT88, PAT97, PAT99, PAT114, PAT115, PAT120, PAT123, PAT137
 cfg.sub_labels = { 'sub-RESP0401', 'sub-RESP0435', 'sub-RESP0458', 'sub-RESP0478', 'sub-RESP0502',...
     'sub-RESP0574', 'sub-RESP0589', 'sub-RESP0608', 'sub-RESP0621', 'sub-RESP0699'};
 cfg.ses_label = 'ses-1';
 cfg.task_label = 'task-SPESclin';
-cfg.ERpath = '/Fridge/users/dorien/derivatives/BB_article/CCEPderiv';
 
 %% load ECoGs with SPES from 10 patients
 

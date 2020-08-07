@@ -55,7 +55,7 @@ for subj = 1:size(dataBase,2)
                 
                 if strcmp(cfg.saveERSP,'yes')
                     % Create a name for a subfolder within output
-                    output = fullfile(cfg.output,dataBase(subj).sub_label,dataBase(subj).ses_label,...
+                    output = fullfile(cfg.TFSPESoutput,dataBase(subj).sub_label,dataBase(subj).ses_label,...
                         dataBase(subj).run_label);
                     
                     newSubFolder = sprintf('%s/Stimpair%s-%s/', output,...
@@ -113,11 +113,3 @@ for subj = 1:size(dataBase,2)
         
     end
 end
-
-
-%Plot image manually
-% figure(1),
-% a=allERSP{stimp,chan};
-% a=flipud(a);
-% imagesc(a,[-15,15])
-% colormap jet

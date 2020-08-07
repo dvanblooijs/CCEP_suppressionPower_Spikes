@@ -1,7 +1,7 @@
-%% mainfile SVM_TFSPES
+%% script to use svm (constructed with makeSVM_TFSPES.m) to detect and visually power suppression in TFSPES plots
 
-%% settings for constructing SVM
-config_makeSVM_TFSPES
+%% settings for using SVM
+config_useSVM_powSup
 
 %% Load ERSP-data
 
@@ -24,25 +24,10 @@ end
 
 disp('All ERSPs are loaded')
 
-%% load visual ratings
-
-dataBase = load_visual_BBs(dataBase,cfg);
-disp('All visual scores are loaded')
-
-%% compare visual ratings from 2 scorers
-
-% something with kappa?
-
-%% make SVM
-
-% makeSVM_TFSPES --> needs to be adapted to be BIDS compatible!!
-
-%% detectPowSup
-
-cfg.inputERSP = '/Fridge/CCEP/derivatives/TFSPES/';
-cfg.outputdetPowSup = '/Fridge/CCEP/derivatives/TFSPES/';
-dataBase = detectPowSup(dataBase,cfg);
+%% detect power suppression
 
 
-%% check detected Power Suppressions visually
+
+%% visually check TFSPES with detected power suppression
+
 

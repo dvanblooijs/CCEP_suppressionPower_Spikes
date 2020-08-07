@@ -5,7 +5,19 @@
 % date: July 2019
 
 %% settings for constructing SVM
-config_makeSVM_TFSPES
+clc
+clear
+cfg = setLocalDataPath(1);
+
+%%
+
+% old database: PAT119,  PAT126, PAT130, PAT135
+cfg.sub_labels = { 'sub-RESP0607', 'sub-RESP0638','sub-RESP0676','sub-RESP0690'};
+cfg.ses_label = 'ses-1';
+cfg.task_label = 'task-SPESclin';
+cfg.run_label = {'run-031211','run-031049','run-021423','run-041139'};
+cfg.train = 1:3;
+cfg.test = 4;
 
 %% Load ERSP-data
 
@@ -20,7 +32,7 @@ for subj = 1:size(cfg.sub_labels,2)
     dataBase(subj).run_label = cfg.run_label{subj};
     
     
-    dataBase(subj).ERSP = load(fullfile(cfg.dir_ERSP, dataBase(subj).sub_label,...
+    dataBase(subj).ERSP = load(fullfile(cfg.TFSPESoutput, dataBase(subj).sub_label,...
         dataBase(subj).ses_label,dataBase(subj).run_label,...
         [dataBase(subj).sub_label, '_',dataBase(subj).ses_label,'_' dataBase(subj).task_label,...
         '_', dataBase(subj).run_label,'_ERSP.mat']));

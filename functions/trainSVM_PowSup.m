@@ -80,7 +80,7 @@ for subj = cfg.train
                     
                     anSVMModel = fitcsvm(trainData, trainTarg, ...
                         'Standardize',true,'ClassNames',{'0','1'},'KernelFunction', 'RBF', 'KernelScale', 'auto', ...
-                        'Prior','empirical','Cost',[0 1;4 0],'BoxConstraint', C);
+                        'Prior','empirical','BoxConstraint', C);
                     
                     L(k) = loss(anSVMModel,valData, valTarg);
                     label_raw = predict(anSVMModel,valData);
@@ -114,7 +114,7 @@ for subj = cfg.train
                 prec_all(p,q,m) = prec_med;
                 F_all(p,q,m) = F_med;
                 
-                fprintf('---- ThL = %g, ThU = %g, C = %g ----\n',ThL(q),ThU(p),C)
+                fprintf('---- subject = %s, ThL = %g, ThU = %g, C = %g ----\n',dataBase(subj).sub_label, ThL(q),ThU(p),C)
                 
             end
         end
@@ -127,11 +127,11 @@ for subj = cfg.train
     train_threshold(subj).prec  = prec_all;
     train_threshold(subj).F     = F_all;
     
-    L_comb(subj,:,:)        = L_all;
-    sens_comb(subj,:,:)     = sens_all;
-    spec_comb(subj,:,:)     = spec_all;
-    prec_comb(subj,:,:)     = prec_all;
-    F_comb(subj,:,:)        = F_all;
+    L_comb(subj,:,:,:)        = L_all;
+    sens_comb(subj,:,:,:)     = sens_all;
+    spec_comb(subj,:,:,:)     = spec_all;
+    prec_comb(subj,:,:,:)     = prec_all;
+    F_comb(subj,:,:,:)        = F_all;
 end
 
 % combine all patients

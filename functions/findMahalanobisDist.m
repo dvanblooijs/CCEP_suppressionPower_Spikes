@@ -3,9 +3,8 @@
 % dec2018: construct script
 % july 2019: adapted to BIDS readible
 
-function [M,Pharmat,Pharmatall] = findCortSpikes(data_stimfree,ccep_header)
+function [M,norm_M, Pharmat_norm, Pharmatall_norm] = findMahalanobisDist(data_stimfree,fs)
 
-fs = ccep_header.Fs;
 % step 1a: filterstop data between 45-55Hz
 [b,a] = butter(4,[45/(fs/2) 55/(fs/2)],'stop'); %8th order butterworth filter between 45-55Hz
 
@@ -45,6 +44,7 @@ disp('...The upslope and downslope measure is calculated...')
 % step 4: mahalanobis distance
 % step 4A: vector of E, U, D
 h=waitbar(0,'Constructing vector of Energy, up- and downslope...');
+V = NaN(size(filt_data,1),3,size(U_all,2));
 for chan=1:size(filt_data,1)
     U = U_all(chan,:);
     D = D_all(chan,:);
@@ -102,13 +102,20 @@ disp('The Mahalanobis distance is calculated!') % --> vector = [channels x times
 % gemiddeld 45 ms ==
 % clear Mrange
 
+%% normalize M
+
+norm_M = M./(sqrt(sum(M.^2,2)));
+
+%% calculate parameter estimates
+
 disp('Calculating parameter estimates takes some time')
+Pharmat_norm = NaN(size(norm_M,1),3);
 for chan=1:size(filt_data,1)
     
-    Pharmat(chan,:) = gevfit(M(chan,:)); % returns 95% confidence intervals for parameter estimates
+    Pharmat_norm(chan,:) = gevfit(norm_M(chan,:)); % returns 95% confidence intervals for parameter estimates
 end
 
-Pharmatall = gevfit(M(:));
+Pharmatall_norm = gevfit(norm_M(:));
 
 disp('Calculation is done!')
 
