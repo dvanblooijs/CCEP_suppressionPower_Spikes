@@ -22,10 +22,11 @@ dataBase = load_ECoGdata(cfg);
 
 dataBase = findIEDchannels(dataBase);
 
-%% re-reference data to reduces artefacts
+%% re-reference data to reduce artefacts
+
 for subj = 1:size(dataBase,2)
 
-    IED = dataBase.IEDch;
+    IED = dataBase(subj).IEDch;
     dataBase = rerefData(dataBase,IED,subj);
     
 end
@@ -35,7 +36,6 @@ end
 dataBase = removeStimArt(dataBase);
 
 fprintf('...All subjects has been run...\n')
-
 
 %% plot avg and rereferenced signal
 
@@ -76,17 +76,21 @@ for subj = 1:size(dataBase,2)
     spikespat.thresh_t_dif = thresh_t_dif;
     spikespat.thresh_SD = thresh_SD;
     
-    filename = fullfile(cfg.visIEDpath,dataBase(subj).sub_label, dataBase(subj).ses_label,...
-        [dataBase(subj).sub_label,'_', dataBase(subj).ses_label, '_', dataBase(subj).task_label,'_', dataBase(subj).run_label,'_detIEDs.mat']);
+    foldername = fullfile(cfg.visIEDpath,dataBase(subj).sub_label, dataBase(subj).ses_label);
+    if ~exist(foldername,'dir')
+        mkdir(foldername)
+    end
+    
+    filename = [dataBase(subj).sub_label,'_', dataBase(subj).ses_label, '_', dataBase(subj).task_label,'_', dataBase(subj).run_label,'_detIEDs.mat'];
 
-    save(filename,'spikespat')
+    save([foldername,filename],'spikespat')
 
 end
 
 
 %% check spikes visually in the first 10 minutes
 
-subj = 1;
+subj = 5;
 IEDch = dataBase(subj).IEDchan;
 IED = dataBase(subj).IEDch;
 plot_SpikesData(dataBase,subj,IEDch, IED)

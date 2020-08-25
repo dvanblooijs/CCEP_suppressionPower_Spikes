@@ -32,21 +32,22 @@ disp('Visually scored spikes are loaded')
 %% re-reference data to reduces artefacts
 for subj = 1:size(dataBase,2)
 
-    IED = dataBase.IEDch; % CHECK! dit klopt wellicht niet
+    IED = dataBase(subj).visIEDs.IED; 
 
-    dataBase = rerefData(dataBase,subj,IED);
+    dataBase = rerefData(dataBase,IED,subj);
 end
 
 %% remove stimulation artefact
 
 dataBase = removeStimArt(dataBase);
 
-fprintf('...All subjects has been run...\n')
+fprintf('...Artefact is removed in all subjects...\n')
 
 %% plot avg and rereferenced signal
+close all
 
 for subj = 1:size(dataBase,2)
-    IED = dataBase(subj).IEDch(1); % CHECK! dit klopt wellicht niet
+    IED = dataBase(subj).visIEDs.IED(1); 
     
     plot_DataRerefStimfree(dataBase,subj,IED)
 end
@@ -162,7 +163,7 @@ disp('All spikes are detected')
 %% visualize detected spikes
 
 subj = 1;
-IEDch = dataBase(subj).IEDchan; % CHECK: dit klopt wellicht niet...
-IED = dataBase(subj).IEDch;
+IEDch = dataBase(subj).visIEDs.IEDchan; 
+IED = dataBase(subj).visIEDs.IED;
 plot_SpikesData(dataBase,subj,IEDch, IED)
 
