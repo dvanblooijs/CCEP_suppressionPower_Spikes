@@ -109,13 +109,18 @@ norm_M = M./(sqrt(sum(M.^2,2)));
 %% calculate parameter estimates
 
 disp('Calculating parameter estimates takes some time')
+
+opt = statset('gevfit');
+opt.MaxIter = 400;
+opt.MaxFunEvals = 1000;
+
 Pharmat_norm = NaN(size(norm_M,1),3);
 for chan=1:size(filt_data,1)
     
-    Pharmat_norm(chan,:) = gevfit(norm_M(chan,:)); % returns 95% confidence intervals for parameter estimates
+    Pharmat_norm(chan,:) = gevfit(norm_M(chan,:),'opt',opt); % returns 95% confidence intervals for parameter estimates
 end
 
-Pharmatall_norm = gevfit(norm_M(:));
+Pharmatall_norm = gevfit(norm_M(:),'opt',opt);
 
 disp('Calculation is done!')
 
