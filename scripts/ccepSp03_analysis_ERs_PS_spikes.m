@@ -4,12 +4,29 @@
 % author: D van Blooijs
 % date: April 2019
 
-addpath(genpath('git_rep/CCEP_suppressionPower_Spikes'))
-addpath('git_rep/SPES_SOZ/detectERs')
-addpath(genpath('git_rep/eeglab/'))
-addpath('git_rep/fieldtrip/')
-ft_defaults
+clc
+clear
+cfg = setLocalDataPath(1);
 
+%% settings
+cfg.sub_labels = { 'sub-RESP0401', 'sub-RESP0435', 'sub-RESP0458', 'sub-RESP0478', 'sub-RESP0502',...
+    'sub-RESP0574', 'sub-RESP0589', 'sub-RESP0608', 'sub-RESP0621', 'sub-RESP0699'};
+cfg.ses_label = 'ses-1';
+cfg.task_label = 'task-SPESclin';
+cfg.ses_label = 'ses-1';
+cfg.task_label = 'task-SPESclin';
+cfg.run_label = {'run-031153','run-051138','run-011714','run-021549','run-031740',...
+    'run-021358','run-021050','run-021057','run-021147','run-031717'};
+
+
+%% load CCEPs
+
+
+%% load BB
+
+
+
+%% load spikes
 
 %% process the data to enable construction of TFSPES plots
 

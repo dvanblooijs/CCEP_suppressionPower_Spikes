@@ -83,7 +83,7 @@ for subj = 1:size(dataBase,2)
     
     filename = [dataBase(subj).sub_label,'_', dataBase(subj).ses_label, '_', dataBase(subj).task_label,'_', dataBase(subj).run_label,'_detIEDs.mat'];
 
-    save([foldername,filename],'spikespat')
+    save([foldername,'/',filename],'spikespat')
 
 end
 

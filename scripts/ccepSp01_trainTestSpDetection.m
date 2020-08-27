@@ -31,7 +31,6 @@ for subj = 1:size(cfg.sub_labels,2)
     dataBase(subj).task_label = cfg.task_label;
     dataBase(subj).run_label = cfg.run_label{subj};
     
-    
     dataBase(subj).ERSP = load(fullfile(cfg.TFSPESoutput, dataBase(subj).sub_label,...
         dataBase(subj).ses_label,dataBase(subj).run_label,...
         [dataBase(subj).sub_label, '_',dataBase(subj).ses_label,'_' dataBase(subj).task_label,...
@@ -42,12 +41,15 @@ disp('All ERSPs are loaded')
 
 %% load visual ratings
 
-dataBase = load_visual_BBs(dataBase,cfg);
-disp('All visual scores are loaded')
+% dataBase = load_visual_BBs(dataBase,cfg);
+% disp('All visual scores are loaded')
 
-%% compare visual ratings from 2 scorers
+for subj =1:size(dataBAse,2)
+    folderName = fullfile(cfg.dir_visrate,[cfg.sub_labels{subj},'_',cfg.ses_label,'_',cfg.run_label{subj},'_visBB_combined.mat']);
+    
+    dataBase(subj).visBB = load(folderName);
 
-% something with kappa?
+end
 
 %% determine true labels for fitcsvm: y
 
@@ -150,7 +152,7 @@ CVModel = crossval(SVMModel);
 kfoldLoss(CVModel)
 
 % save SVMmodel
-pathname = '/Fridge/users/dorien/derivatives/BB_article/';
+pathname = cfg.SVMpath;
 filename = sprintf('SVMmodel_trained_BB_%1.1f_%1.1f_%1.2f_%s.mat',ThU_opt,ThL_opt,C_opt,datestr(now,'yyyymmdd'));
 save(fullfile(pathname,filename),'SVMModel','trainPar')
 

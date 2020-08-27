@@ -74,7 +74,7 @@ end
 
 %% save all annotated spikes
 
-folderName = cfg.ERpath;
+folderName = cfg.visIEDpath;
 fileName = [dataBase(subj).sub_label, '_', dataBase(subj).ses_label, '_',...
     dataBase(subj).task_label, '_', dataBase(subj).run_label, '_visIEDs.mat'];
 

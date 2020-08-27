@@ -35,7 +35,7 @@ disp('All ECoGs are preprocessed')
 
 %% detect ERs
 
-dataBase = detectERs(dataBase,cfg);
+[dataBase, thresh, minSD,sel] = detectERs(dataBase,cfg);
 
 disp('All ERs are detected')
 
@@ -63,10 +63,10 @@ for subj=1:size(dataBase,2)
     dataName = dataBase(subj).dataName;
     ch = dataBase(subj).ch;
     % detection parameters must be described when known!!
-    detpar.thresh = NaN;
-    detpar.minSD = NaN;
-    detpar.sel = NaN;
-    
+    detpar.thresh = thresh;
+    detpar.minSD = minSD;
+    detpar.sel = sel;
+
     save(fullfile(targetFolder,fileName), 'ERs','dataName','ch','detpar');
 end
 

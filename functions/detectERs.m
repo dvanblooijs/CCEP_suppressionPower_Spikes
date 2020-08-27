@@ -5,7 +5,7 @@
 % this is used in van Blooijs et al. Human Brain Mapping 2018
 % September 2019 - DvB - this function is made BIDS compatible
 
-function dataBase = detectERs(dataBase,cfg)
+function [dataBase, thresh, minSD,sel] = detectERs(dataBase,cfg)
 
 
 for subj = 1:size(dataBase,2)

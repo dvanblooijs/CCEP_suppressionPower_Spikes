@@ -7,6 +7,7 @@ function [Y_alltrain,Y_alltest, Y_conc, Y] = determine_Target_SVM(dataBase,cfg)
 % pre-allocation
 S = cell(size(cfg.sub_labels,2),1);
 Y_conc = cell(size(cfg.sub_labels,2),1);
+Y = cell(size(cfg.sub_labels,2),1);
 
 for subj=1:size(cfg.sub_labels,2)
     
