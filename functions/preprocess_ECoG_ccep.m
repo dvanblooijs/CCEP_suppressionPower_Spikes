@@ -11,8 +11,8 @@ end
 for subj = 1:size(dataBase,2)
     
     %% unique stimulation pairs
-    stimpair = dataBase(subj).tb_events.electrical_stimulation_site(strcmp(dataBase(subj).tb_events.sub_type,'SPES'));
-    
+    stimpair = dataBase(subj).tb_events.electrical_stimulation_site(contains(dataBase(subj).tb_events.sub_type,'SPES') & ~contains(dataBase(subj).tb_events.electrical_stimulation_site,'n/a')) ;
+
     stimnum = NaN(size(stimpair,1),2);
     for stimp = 1:size(stimpair,1)
         stimchans = strsplit(stimpair{stimp},'-');
@@ -21,7 +21,7 @@ for subj = 1:size(dataBase,2)
         end
     end
     
-    stimcur = str2double(dataBase(subj).tb_events.electrical_stimulation_current(strcmp(dataBase(subj).tb_events.sub_type,'SPES')));
+    stimcur = str2double(dataBase(subj).tb_events.electrical_stimulation_current(contains(dataBase(subj).tb_events.sub_type,'SPES') & ~contains(dataBase(subj).tb_events.electrical_stimulation_site,'n/a')));
     
     if strcmp(cfg.dir,'yes') && strcmp(cfg.amp,'yes')
         stimelek = [stimnum stimcur];
@@ -67,7 +67,7 @@ for subj = 1:size(dataBase,2)
     
     stimdif = find(n ~= max_stim);
     for stimp =1:size(stimdif,2)
-        [cc_stimchans{stimdif(stimp),1} '-' cc_stimchans{stimdif(stimp),2}]
+        [cc_stimchans{stimdif(stimp),1} '-' cc_stimchans{stimdif(stimp),2}] %#ok<NOPRT>
     end
     
     %% select epochs

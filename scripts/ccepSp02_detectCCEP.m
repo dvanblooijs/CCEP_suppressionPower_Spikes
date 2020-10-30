@@ -12,6 +12,8 @@ cfg.sub_labels = { 'sub-RESP0401', 'sub-RESP0435', 'sub-RESP0458', 'sub-RESP0478
     'sub-RESP0574', 'sub-RESP0589', 'sub-RESP0608', 'sub-RESP0621', 'sub-RESP0699'};
 cfg.ses_label = 'ses-1';
 cfg.task_label = 'task-SPESclin';
+cfg.run_label = {'run-031153','run-051138','run-011714','run-021549','run-031740'...
+    'run-021358','run-021050','run-021057','run-021147','run-031717'};
 
 %% load ECoGs with SPES from 10 patients
 
@@ -29,18 +31,21 @@ cfg.amp = 'no'; % if you want to take stimulation current into account
 cfg.epoch_length = 4; % in seconds, -2:2
 cfg.epoch_prestim = 2;
 
+cfg.amplitude_thresh = 2.6;
+cfg.n1_peak_range = 100;
+
 dataBase = preprocess_ECoG_ccep(dataBase,cfg);
 
 disp('All ECoGs are preprocessed')
 
 %% detect ERs
 
-[dataBase, thresh, minSD,sel] = detectERs(dataBase,cfg);
+dataBase = detect_n1peak_ECoG_ccep(dataBase, cfg);
 
 disp('All ERs are detected')
 
 
-%% visually check detected cceps
+%% visually check detected ccep
 
 dataBase = visualRating_ccep(dataBase,cfg);
 
@@ -62,10 +67,10 @@ for subj=1:size(dataBase,2)
     ERs = dataBase(subj).ERs;
     dataName = dataBase(subj).dataName;
     ch = dataBase(subj).ch;
+    
     % detection parameters must be described when known!!
-    detpar.thresh = thresh;
-    detpar.minSD = minSD;
-    detpar.sel = sel;
+    detpar.thresh = cfg.thresh;
+    detpar.minSD = cfg.minSD;
 
     save(fullfile(targetFolder,fileName), 'ERs','dataName','ch','detpar');
 end
