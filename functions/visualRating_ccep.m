@@ -125,6 +125,6 @@ for stimp = endstimp+1:size(dataBase(subj).cc_epoch_sorted_avg,2)
 end
 
 dataBase(subj).ccep = ccep;
-disp('Visual rating completed')
+fprintf('Visual rating of %s completed\n',dataBase(subj).sub_label)
 
 end
