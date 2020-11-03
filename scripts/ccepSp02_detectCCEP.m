@@ -44,11 +44,31 @@ dataBase = detect_n1peak_ECoG_ccep(dataBase, cfg);
 
 disp('All ERs are detected')
 
-
 %% visually check detected ccep
+close all
 
-dataBase = visualRating_ccep(dataBase,cfg);
+% select subject
+subs = {dataBase(:).sub_label};
+string = [repmat('%s, ',1,size(subs,2)-1), '%s'];
+substring = input(sprintf(['Choose subject: ',string,'\n'],subs{:}),'s');
+subj = find(contains({dataBase(:).sub_label},substring));
+    
+% load checked N1s if visual rating has started earlier
+if exist(fullfile(cfg.ERpath, dataBase(subj).sub_label,dataBase(subj).ses_label,...
+        [dataBase(subj).sub_label, '_', dataBase(subj).ses_label,'_',dataBase(subj).task_label,'_',dataBase(subj).run_label,'_N1sChecked.mat']),'file')
+   dataBase(subj).ccep = load(fullfile(cfg.ERpath, dataBase(subj).sub_label,dataBase(subj).ses_label,...
+        [dataBase(subj).sub_label, '_', dataBase(subj).ses_label,'_',dataBase(subj).task_label,'_',dataBase(subj).run_label,'_N1sChecked.mat']));   
+end
 
+% continue with the stimulation pair after the last saved stimulation pair
+if any(contains(fieldnames(dataBase(subj).ccep),'checkUntilStimp'))
+    endstimp = dataBase(subj).ccep.checkUntilStimp;
+else
+    endstimp = 0;
+end
+
+dataBase = visualRating_ccep(dataBase,subj,cfg,endstimp);
+    
 %% save ccep
 
 for subj=1:size(dataBase,2)

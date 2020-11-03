@@ -208,5 +208,8 @@ for subj = 1:length(dataBase)
     dataBase(subj).ccep.n1_peak_sample = n1_peak(:,:,1);
     dataBase(subj).ccep.n1_peak_amplitude = n1_peak(:,:,2);
     dataBase(subj).cc_epoch_sorted_avg = cc_epoch_sorted_avg;
+    dataBase(subj).ccep.amplitude_thresh = cfg.amplitude_thresh;
+    dataBase(subj).ccep.n1_peak_range = cfg.n1_peak_range;
+
 end
 end
