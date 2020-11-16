@@ -71,7 +71,7 @@ dataBase = visualRating_ccep(dataBase,subj,cfg,endstimp);
     
 %% save ccep
 
-for subj=1:size(dataBase,2)
+for subj = 1:size(dataBase,2)
     targetFolder = fullfile(cfg.ERpath, dataBase(subj).sub_label,dataBase(subj).ses_label);
     
     % Create the folder if it doesn't exist already.
@@ -82,17 +82,18 @@ for subj=1:size(dataBase,2)
     start_filename = strfind(dataBase(subj).dataName,'/');
     stop_filename = strfind(dataBase(subj).dataName,'_ieeg');
     
-    fileName=[dataBase(subj).dataName(start_filename(end)+1:stop_filename-1),'_ERs.mat'];
+    fileName = [dataBase(subj).dataName(start_filename(end)+1:stop_filename-1),'_N1sChecked.mat'];
     
-    ERs = dataBase(subj).ERs;
-    dataName = dataBase(subj).dataName;
-    ch = dataBase(subj).ch;
+    ccep = dataBase(subj).ccep;
+    ccep.dataName = dataBase(subj).dataName;
+    ccep.ch = dataBase(subj).ch;
+    ccep.cc_stimchans = dataBase(subj).cc_stimchans;
     
     % detection parameters must be described when known!!
-    detpar.thresh = cfg.thresh;
-    detpar.minSD = cfg.minSD;
+    ccep.detpar.amplitude_thresh = cfg.amplitude_thresh;
+    ccep.detpar.n1_peak_range = cfg.n1_peak_range;
 
-    save(fullfile(targetFolder,fileName), 'ERs','dataName','ch','detpar');
+    save(fullfile(targetFolder,fileName), '-struct','ccep');
 end
 
 
