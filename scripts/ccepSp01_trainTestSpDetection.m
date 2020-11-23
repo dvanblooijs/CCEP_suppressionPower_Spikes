@@ -44,14 +44,14 @@ disp('All ERSPs are loaded')
 % dataBase = load_visual_BBs(dataBase,cfg);
 % disp('All visual scores are loaded')
 
-for subj =1:size(dataBAse,2)
+for subj =1:size(dataBase,2)
     folderName = fullfile(cfg.dir_visrate,[cfg.sub_labels{subj},'_',cfg.ses_label,'_',cfg.run_label{subj},'_visBB_combined.mat']);
     
     dataBase(subj).visBB = load(folderName);
 
 end
 
-%% determine true labels for fitcsvm: y
+%% determine true labels for fitcsvm: y 
 
 [Y_alltrain,Y_alltest, Y_conc, Y] = determine_Target_SVM(dataBase,cfg);
 
@@ -67,9 +67,10 @@ end
 trainPar.ThU = 0.1:0.1:0.9;  % range upper threshold hysteresis
 trainPar.ThL = 0.1:0.1:0.9;  % range lower threshold hysteresis
 trainPar.C = 2.^(-4:2:8); % range of BoxConstraint in svm model
-trainPar.boot = input('Use bootstrapped ERSP [yes] or ERSP without bootstrapping [no]: ', 's');
 
 [train_threshold,train_threshold_all] = trainSVM_PowSup(cfg,dataBase,trainPar,Y_conc);
+
+disp('Training completed')
 
 %% step 1b: make heatmaps for each patient and for patients combined
 
@@ -110,9 +111,9 @@ end
 % we now train an SVMmodel with optimal thresholds as determined in step 1
 
 % optimal value upper en lower threshold (determined in step1)
-ThU_opt = 0.7;
-ThL_opt = 0.2;
-C_opt = 0.25;
+ThU_opt = 0.2;
+ThL_opt = 0.7;
+C_opt = 4;
 
 % all images of patients in train set
 n = NaN(size(cfg.train,2),1);
@@ -122,22 +123,31 @@ end
 N = sum(n);
 
 % get features
-D = cell(size(cfg.train,2),1); A = cell(size(cfg.train,2),1);
+tStart = cell(size(cfg.train,2),1); tWidth = cell(size(cfg.train,2),1);
+fStart = cell(size(cfg.train,2),1); fWidth = cell(size(cfg.train,2),1);
+Area = cell(size(cfg.train,2),1);
+
 for i=1:size(cfg.train,2)
     
-    [D{i},A{i}] = getfeaturesTrain(dataBase(cfg.train(i)),ThL_opt, ThU_opt,trainPar);
+    [tStart{i}, tWidth{i}, fStart{i}, fWidth{i}, Area{i}] = getfeaturesTrain(dataBase(cfg.train(i)),ThL_opt, ThU_opt,trainPar);
     
 end
 
 % vector [3*allERSPimages x 2]
-D_all = vertcat(D{:});
-A_all = vertcat(A{:});
+tStart_all = vertcat(tStart{:});
+tWidth_all = vertcat(tWidth{:});
+fStart_all = vertcat(fStart{:});
+fWidth_all = vertcat(fWidth{:});
+Area_all = vertcat(Area{:});
 
-X = [];
 % X-values in Support vector machine
-X(:,1:2) = A_all;                    % store area and duration in X
-X(:,3:4) = D_all;
-
+X = [];
+X(:,1:2) = Area_all;                    % store area and duration in X
+X(:,3:4) = tWidth_all;
+X(:,5:6) = fWidth_all;
+X(:,7:8) = tStart_all;
+X(:,9:10) = fStart_all;
+            
 X_train = X;
 % optimal SVM model
 SVMModel = fitcsvm(X_train, Y_alltrain, ...
@@ -155,17 +165,21 @@ kfoldLoss(CVModel)
 pathname = cfg.SVMpath;
 filename = sprintf('SVMmodel_trained_BB_%1.1f_%1.1f_%1.2f_%s.mat',ThU_opt,ThL_opt,C_opt,datestr(now,'yyyymmdd'));
 save(fullfile(pathname,filename),'SVMModel','trainPar')
+fprintf('SVMmodel is saved in %s\n',filename)
 
 %% test SVM model with one patient: RESP0690
 
 % detectPowSup(dataBase,cfg)
 
-[D_all,A_all] = getfeaturesTrain(dataBase(cfg.test),ThL_opt, ThU_opt,trainPar);
+[tStart, tWidth, fStart, fWidth, Area] = getfeaturesTrain(dataBase(cfg.test),ThL_opt, ThU_opt,trainPar);
 
 % X-values in Support vector machine
 X = [];
-X(:,1:2) = A_all;                    % store area and duration in X
-X(:,3:4) = D_all;
+X(:,1:2) = Area;                    % store area and duration in X
+X(:,3:4) = tWidth;
+X(:,5:6) = fWidth;
+X(:,7:8) = tStart;
+X(:,9:10) = fStart;
 
 valData = X;
 valTarg = Y_alltest;
@@ -186,13 +200,32 @@ else
     F = 2 * (prec * sens)/(prec + sens);
 end
 
+%% detect ERSPs
+
+for subj = 1:size(dataBase,2)
+    
+    [tStart_conc, tWidth_conc, fStart_conc, fWidth_conc, Area_conc,...
+        dataBase(subj).ERSP.tStart, dataBase(subj).ERSP.tWidth, ...
+        dataBase(subj).ERSP.fStart, dataBase(subj).ERSP.fWidth, ...
+        dataBase(subj).ERSP.Area] = getfeaturesTrain(dataBase(subj),ThL_opt, ThU_opt,trainPar);
+    
+    % store area and duration in X
+    X = [];
+    X(:,1:2) = Area_conc;                    
+    X(:,3:4) = tWidth_conc;
+    X(:,5:6) = fWidth_conc;
+    X(:,7:8) = tStart_conc;
+    X(:,9:10) = fStart_conc;
+    
+    label_raw = predict(SVMModel,X);
+    label_raw = str2double(label_raw);
+    
+    dataBase(subj).ERSP.detected = reshape(label_raw,size(dataBase(subj).ERSP.allERSPboot));
+    
+end
+
 %% check detected ERSPs
-
-subj = 1;
-stimps = 1:size(dataBase(subj).cc_epoch_sorted,3);
-chans = dataBase(subj).soz;%1:size(dataBase(1).cc_epoch_sorted,1);
-
-dataBase = visualRating_tfspes(dataBase,stimps, chans);
+dataBase = visualRating_tfspes(dataBase,subj);
 checked = dataBase(1).ERSP.checked;
 
 output = fullfile(cfg.TFSPESpath,dataBase(subj).sub_label,dataBase(subj).ses_label,...

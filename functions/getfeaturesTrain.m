@@ -3,34 +3,30 @@
 % made BIDS compatible by Dorien van Blooijs
 % september 2019
 
-function [D,A,Dmat,Amat] = getfeaturesTrain(subject, ThL, ThU,trainPar)
+function [Area_conc, tStart_conc, fStart_conc, tWidth_conc, fWidth_conc, ...
+    Area, tStart,  fStart, tWidth, fWidth] = getfeaturesTrain(subject, ThL, ThU)
 
 t = subject.ERSP.times;
-%%Divide hys in pre- and post stimulation
+
+% Divide hys in pre- and post stimulation
 time(1,:) = t<0;
 time(2,:) = t>0;
 
-if strcmp(trainPar.boot,'yes')
-    allERSP = subject.ERSP.allERSPboot;
-elseif strcmp(trainPar.boot,'no')
-        allERSP = subject.ERSP.allERSP;
-else
-    error('bootstrapping on/of is not defined')
-end
+allERSP = subject.ERSP.allERSPboot;
 stimpchan = subject.ERSP.cc_stimsets;
 
-%         Ts=t(2)-t(1);
-%         Fs=1/Ts;
-Ts = median(unique(diff(t)))/1000; % /1000 to convert from ms to s
-Fs = 1/Ts;
-Dmat = cell(2,1);
-Amat = cell(2,1);
+% pre-allocation
+Area = cell(2,1);
+tStart = cell(2,1);
+fStart = cell(2,1);
+tWidth = cell(2,1);
+fWidth = cell(2,1);
 
 for stimpair=1:size(allERSP,1)                            % for each stimulation pair
     for chan=1:size(allERSP,2)                        % for each recording electrode
         
-        % hysteresis3d assumes non-negative image. We want to detect "blue
-        % blobs" (negative values). Therefor, I multiply the ERSP with -1
+        % hysteresis3d assumes non-negative image. We want to detect "power suppression
+        % (negative values). Therefor, we multiply the ERSP with -1
         % and remove all values <0.
         ERSP = allERSP{stimpair,chan};
         ERSP2 = -1* ERSP;
@@ -41,50 +37,46 @@ for stimpair=1:size(allERSP,1)                            % for each stimulation
         t2=ThU;                                          % Upper threshold
         conn=8;                                             % Connectivity
         [~,hys]=hysteresis3d(ERSP2,t1,t2,conn);
-%         allhys{stimpair,chan}= hys;
-%         alltri{stimpair,chan}= tri;
         
+        % pre-allocation
         hys_div = NaN(2,size(ERSP2,1),size(ERSP2,2)/2);
-        for win=1:2 % pre and post stimulation
+        for win = 1:2 % pre and post stimulation
             hys_div(win,:,:) = hys(:,time(win,:));
             
             %%Get area and other features
-            stats=regionprops(squeeze(hys_div(win,:,:)),'Area', 'ConvexHull', 'EquivDiameter', 'EulerNumber', 'FilledImage', 'FilledArea', 'Image');
-            
-            %%Get maximum duration pre and post-stimulation
-            for i=1:size(stats,1)                               % for each area per picture get duration/area
-                
-                img = stats(i).Image;               
-                stats(i).duration = max(sum(img,2))*Ts;          % get row with maximum duration
-                
-            end
-            statsPrePost(win).stats = stats;
-                      
-            %%Get area and duration in a double
-            l = stimpchan(stimpair,:);
-            
-            if chan==l(1) || chan==l(2)                   % don't take recording which is in stimulus pair
-                Dmat{win}(stimpair,chan) = NaN;
-                Amat{win}(stimpair,chan) = NaN;
+            stats = regionprops(logical(squeeze(hys_div(win,:,:))),'Area','BoundingBox');
+                                  
+            %%Get area and duration in a double           
+            if ismember(chan,stimpchan(stimpair,:))           % don't take recording which is in stimulus pair
+                Area{win}(stimpair,chan) = NaN;
+                tStart{win}(stimpair,chan) = NaN;
+                fStart{win}(stimpair,chan) = NaN;
+                tWidth{win}(stimpair,chan) = NaN;
+                fWidth{win}(stimpair,chan) = NaN;
                 
             elseif isempty(stats)
-                Dmat{win}(stimpair,chan) = 0;
-                Amat{win}(stimpair,chan) = 0;
+                Area{win}(stimpair,chan) = 0;
+                tStart{win}(stimpair,chan) = 0;
+                fStart{win}(stimpair,chan) = 0;
+                tWidth{win}(stimpair,chan) = 0;
+                fWidth{win}(stimpair,chan) = 0;
                 
             else
                 [val,idx] = max([stats.Area]);
-                Dmat{win}(stimpair,chan) = stats(idx).duration;
-                Amat{win}(stimpair,chan) = val;
+                Area{win}(stimpair,chan) = val;
+                tStart{win}(stimpair,chan) = stats(idx).BoundingBox(1);
+                fStart{win}(stimpair,chan) = stats(idx).BoundingBox(2);
+                tWidth{win}(stimpair,chan) = stats(idx).BoundingBox(3);
+                fWidth{win}(stimpair,chan) = stats(idx).BoundingBox(4);
             end
         end
-        
-        allstats{stimpair,chan} = statsPrePost;
-
-%         fprintf('Stimpair %d of %d, channel %d of %d\n',stimpair, size(allERSP,1),chan,size(allERSP,2))
-        
+                
     end
 end
 
-D = [reshape(Dmat{1},numel(Dmat{1}),1),reshape(Dmat{2},numel(Dmat{2}),1)];
-A = [reshape(Amat{1},numel(Amat{1}),1),reshape(Amat{2},numel(Amat{2}),1)];
+Area_conc = [reshape(Area{1},numel(Area{1}),1),reshape(Area{2},numel(Area{2}),1)];
+tStart_conc = [reshape(tStart{1},numel(tStart{1}),1),reshape(tStart{2},numel(tStart{2}),1)];
+fStart_conc = [reshape(fStart{1},numel(fStart{1}),1),reshape(fStart{2},numel(fStart{2}),1)];
+tWidth_conc = [reshape(tWidth{1},numel(tWidth{1}),1),reshape(tWidth{2},numel(tWidth{2}),1)];
+fWidth_conc = [reshape(fWidth{1},numel(fWidth{1}),1),reshape(fWidth{2},numel(fWidth{2}),1)];
 

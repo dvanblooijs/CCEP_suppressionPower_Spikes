@@ -24,14 +24,6 @@ ThU = trainPar.ThU;  % range upper threshold hysteresis
 ThL = trainPar.ThL;  % range lower threshold hysteresis
 gridC = trainPar.C; % range of BoxConstraint in svm model
 
-if strcmp(trainPar.boot,'yes')
-    modeERSP = 'allERSPboot';
-elseif strcmp(trainPar.boot,'no')
-    modeERSP = 'allERSP';
-else
-    error('bootstrapping on/off is not defined')
-end
-
 % pre-allocation
 train_threshold = struct; 
 L_comb      = NaN(size(cfg.train,3),size(ThU,2),size(ThL,2),size(gridC,2));
@@ -45,7 +37,7 @@ for subj = cfg.train
     Y_indiv = Y_conc{subj};
     
     % all images of one patient in train set
-    N = numel(dataBase(subj).ERSP.(modeERSP));
+    N = numel(dataBase(subj).ERSP.allERSPboot);
     
     % randomly assign which images are left out in each fold (for cross validation)
     kFolds = 10;     % number of folds
@@ -60,12 +52,15 @@ for subj = cfg.train
     for p = 1:length(ThU)
         for q = 1:length(ThL)
             
-            [D_all,A_all] = getfeaturesTrain(dataBase(subj),ThL(q), ThU(p),trainPar);
+            [Area_conc, tStart_conc, fStart_conc, tWidth_conc, fWidth_conc] = getfeaturesTrain(dataBase(subj),ThL(q), ThU(p));
             
             % X-values in Support vector machine
             X = [];
-            X(:,1:2) = A_all;                    % store area and duration in X
-            X(:,3:4) = D_all;
+            X(:,1:2)  = Area_conc;                    % store area, onset time, onset frequency, duration and frequency band in X
+            X(:,3:4)  = tStart_conc;
+            X(:,5:6)  = fStart_conc;
+            X(:,7:8)  = tWidth_conc;
+            X(:,9:10) = fWidth_conc;
             
             for m = 1:size(gridC,2)
                 

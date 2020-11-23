@@ -15,8 +15,8 @@ for subj=1:size(cfg.sub_labels,2)
         for chan = 1:size(dataBase(subj).ERSP.allERSPboot,2)
             
             %Get stimulus pair in visual scoring
-            if isequal(dataBase(subj).ERSP.ch,dataBase(subj).vis_scores.chan)
-                if isequal(dataBase(subj).ERSP.cc_stimsets,dataBase(subj).vis_scores.stimpnum)
+            if isequal(dataBase(subj).ERSP.ch,dataBase(subj).visBB.ch)
+                if isequal(dataBase(subj).ERSP.cc_stimsets,dataBase(subj).visBB.cc_stimsets)
                     %  fprintf('%s: Channels and stimsets are equal\n',dataBase(subj).sub_label)
                     stimp = stimpair;
                     channum = chan;
@@ -36,16 +36,11 @@ for subj=1:size(cfg.sub_labels,2)
                 stimp = find(strcmpi([dataBase(subj).ERSP.cc_stimchans{stimpair,1},'-',dataBase(subj).ERSP.cc_stimchans{stimpair,2}],dataBase(subj).vis_scores.stimorder));
             end
             
-            %Get indexes of similar scoring
-            if dataBase(subj).vis_scores.BS(1,stimp,channum)==dataBase(subj).vis_scores.BS(2,stimp,channum)
-                S{subj}(stimpair,chan) = dataBase(subj).vis_scores.BS(1,stimp,channum);
-            else
-                S{subj}(stimpair,chan) = 0;
-            end
+            S{subj}(stimpair,chan) = dataBase(subj).visBB.vis_BB_combined(stimp,channum);
         end
     end
     Y{subj} = S{subj};
-    Y_conc{subj} = reshape(S{subj},numel(S{subj}),1);
+    Y_conc{subj} = reshape(S{subj},numel(S{subj}),1); % one column (concatenated with each column, so repeatedly [stimpair x 1ch])
 end
 
 Y_alltrain = vertcat(Y_conc{cfg.train});                           % store true label in Y

@@ -38,10 +38,10 @@ disp('All ERSPs are loaded')
 
 for subj = 1:size(dataBase,2)
     folderName1 = fullfile(cfg.dir_visrate,[cfg.sub_labels{subj},'_',cfg.ses_label,'_',cfg.run_label{subj},'_visBB_DvB.mat']);
-%     folderName2 = fullfile(cfg.dir_visrate,[cfg.sub_labels{subj},'_',cfg.ses_label,'_',cfg.run_label{subj},'_visBB_MS.mat']);
+    folderName2 = fullfile(cfg.dir_visrate,[cfg.sub_labels{subj},'_',cfg.ses_label,'_',cfg.run_label{subj},'_visBB_MvdS.mat']);
 
     dataBase(subj).visBB1 = load(folderName1);
-%     dataBase(subj).visBB2 = load(folderName2);
+    dataBase(subj).visBB2 = load(folderName2);
    
 end
 
@@ -60,7 +60,7 @@ n=1;
 for stimp = 1:size(dataBase(subj).ERSP.allERSPboot,1)
     for chan = 1:size(dataBase(subj).ERSP.allERSPboot,2)
         
-        if dataBase(subj).visBB1 ~= dataBase(subj).visBB2
+        if dataBase(subj).visBB1.vis_BB(stimp,chan) ~= dataBase(subj).visBB2.vis_BB(stimp,chan)
             plot_ERSP(dataBase(subj).ERSP,stimp,chan)
             
             perc = n / size(dataBase(subj).ERSP.allERSPboot(:),1) *100;
@@ -70,6 +70,9 @@ for stimp = 1:size(dataBase(subj).ERSP.allERSPboot,1)
             if strcmp(s,'y')
                 vis_BB_combined(stimp,chan) = 1;
             end
+        else
+            vis_BB_combined(stimp,chan) = dataBase(subj).visBB1.vis_BB(stimp,chan);
+            
         end
         n=n+1;
         

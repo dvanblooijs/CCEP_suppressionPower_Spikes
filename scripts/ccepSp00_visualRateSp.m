@@ -63,7 +63,7 @@ disp('Visual rating in completed')
 
 %% save
 
-s = input('Write down the initials of the person who did the visual rating [DvB/MS]: ','s');
+s = input('Write down the initials of the person who did the visual rating [DvB/MvdS]: ','s');
 
 folderName = fullfile(cfg.dir_visrate,[cfg.sub_labels{subj},'_',cfg.ses_label,'_',cfg.run_label{subj},'_visBB_',s,'.mat']);
 

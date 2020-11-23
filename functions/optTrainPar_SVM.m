@@ -3,8 +3,8 @@ function optTrainPar_SVM(cfg,dataBase,trainPar,train_threshold,subj)
 if isempty(trainPar.ThU_opt)
     minL = min(min(min(train_threshold(subj).L)));
     
-    [r,~] = find(train_threshold(subj).L == minL); %ThU
-    [r2,c] = find(squeeze(train_threshold(subj).L(r,:,:)) == minL); % ThL and C
+    [r,~] = find(train_threshold(subj).L == minL,1,'first'); %ThU
+    [r2,c] = find(squeeze(train_threshold(subj).L(r,:,:)) == minL,1,'first'); % ThL and C
     
     ThUopt = trainPar.ThU(r) ;
     ThLopt = trainPar.ThL(r2) ;
