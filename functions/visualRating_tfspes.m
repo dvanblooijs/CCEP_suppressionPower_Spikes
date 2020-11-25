@@ -18,9 +18,15 @@ n=1;
 for stimp = 1:size(dataBase(subj).ERSP.allERSPboot,1)
     for chan = 1:size(dataBase(subj).ERSP.allERSPboot,2)
         
-        if ~ismember(chan,dataBase(subj).ERSP.cc_stimsets(stimp,:)) % && detected(chan,stimp) == 1
+        if ~ismember(chan,dataBase(subj).ERSP.cc_stimsets(stimp,:)) % && detected(stimp,chan) == 1
             plot_ERSP(dataBase(subj).ERSP,stimp,chan)
             hold on
+            
+            if detected(stimp,chan) == 1
+               C = [0.7 0 0]; % darkred
+            else
+                C = [0.9 0.9 0.9]; % light grey
+            end
             
             for win=1:2
                 if dataBase(subj).ERSP.Area{win}(stimp,chan) >0
@@ -41,7 +47,7 @@ for stimp = 1:size(dataBase(subj).ERSP.allERSPboot,1)
                     w = dataBase(subj).ERSP.tWidth{win}(stimp,chan)*pixelWidth;
                     h = dataBase(subj).ERSP.fWidth{win}(stimp,chan)*pixelHeigth;
                     
-                    rectangle('Position',[x1 y1 w h]),
+                    rectangle('Position',[x1 y1 w h],'EdgeColor',C),
                 end
             end
             hold off,
