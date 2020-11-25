@@ -40,8 +40,8 @@ if isempty(trainPar.ThU_opt)
         
     end
 else
-    r = find(trainPar.ThU == trainPar.ThU_opt);
-    r2 = find(trainPar.ThL == trainPar.ThL_opt);
+    r = find(round(trainPar.ThU,1) == trainPar.ThU_opt);
+    r2 = find(round(trainPar.ThL,1) == trainPar.ThL_opt);
     c = find(trainPar.C == trainPar.C_opt);
     
     ThUopt = trainPar.ThU(r) ;
