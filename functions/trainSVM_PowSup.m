@@ -75,7 +75,7 @@ for subj = cfg.train
                     
                     anSVMModel = fitcsvm(trainData, trainTarg, ...
                         'Standardize',true,'ClassNames',{'0','1'},'KernelFunction', 'RBF', 'KernelScale', 'auto', ...
-                        'Prior','empirical','BoxConstraint', C);
+                        'Cost',[0 1;2 0],'BoxConstraint', C);
                     
                     L(k) = loss(anSVMModel,valData, valTarg);
                     label_raw = predict(anSVMModel,valData);
