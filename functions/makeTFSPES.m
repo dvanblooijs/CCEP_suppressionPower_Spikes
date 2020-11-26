@@ -11,9 +11,7 @@ for subj = 1:size(dataBase,2)
     
     % pre-allocation
     allERSP = cell(size(dataBase(subj).cc_epoch_sorted,3),size(dataBase(subj).cc_epoch_sorted,1));
-    allERSP2 = cell(size(dataBase(subj).cc_epoch_sorted,3),size(dataBase(subj).cc_epoch_sorted,1));
     allERSPboot = cell(size(dataBase(subj).cc_epoch_sorted,3),size(dataBase(subj).cc_epoch_sorted,1));
-    allERSPboot2 = cell(size(dataBase(subj).cc_epoch_sorted,3),size(dataBase(subj).cc_epoch_sorted,1));
     
     %% Choose stimulation from specific electrode
     for stimp=1:size(dataBase(subj).cc_epoch_sorted,3) % number for stim pair
@@ -69,30 +67,18 @@ for subj = 1:size(dataBase,2)
                 end
                 
                 close(gcf);
-                
-                %% Hysteresis
-                t_start = length(times)/2+1;                        % t_start after stim
-                ERSP2 = ERSP * -1;                                  % Hysteresis takes highest threshold (not absolute)
-                ERSP2 = ERSP2(:,t_start:end);                       % Get part after stim
-                
+                                
                 ERSP_boot = ERSP;
                 ERSP_boot(ERSP>erspboot(:,1) & ERSP<erspboot(:,2)) = 0;
-                ERSP_boot2 = ERSP_boot * -1;                                  % Hysteresis takes highest threshold (not absolute)
-                ERSP_boot2 = ERSP_boot2(:,t_start:end);                       % Get part after stim
                 
                 allERSP{stimp,chan} = ERSP;
                 allERSPboot{stimp,chan} = ERSP_boot;
-                allERSP2{stimp,chan} = ERSP2;
-                allERSPboot2{stimp,chan} = ERSP_boot2;
                 
-                clear ERSP ERSP2
+                clear ERSP
                 
             else
-                allERSP{stimp,chan} = [];
-                allERSPboot{stimp,chan} = [];
-                allERSP2{stimp,chan} = [];
-                allERSPboot2{stimp,chan} = [];
-                
+                allERSPboot{stimp,chan} = [];                
+                allERSP{stimp,chan} = [];                
             end
         end
         
@@ -105,11 +91,12 @@ for subj = 1:size(dataBase,2)
             cc_stimsets = dataBase(subj).cc_stimsets;
             ch = dataBase(subj).ch;
             
-            save([targetFolder,fileName], 'allERSP', 'allERSP2', 'allERSPboot','allERSPboot2','times','freqs','cc_stimchans','cc_stimsets','ch');
+            save([targetFolder,fileName], '-v7.3','allERSP', 'allERSPboot','times','freqs','cc_stimchans','cc_stimsets','ch');
         end
         
         dataBase(subj).ERSP = allERSP;
         dataBase(subj).ERSPboot = allERSPboot;
-        
+        dataBase(subj).times = times;
+        dataBase(subj).freqs = freqs;
     end
 end
