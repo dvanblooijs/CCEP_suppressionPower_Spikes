@@ -33,6 +33,7 @@ disp('All ECoGs are preprocessed')
 
 %% make TF-SPES Event-Related - Stimulus - Perturbations
 
+close all
 cfg.saveERSP = 'yes';
 
 dataBase = makeTFSPES(dataBase,cfg);
