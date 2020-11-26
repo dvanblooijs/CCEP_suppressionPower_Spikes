@@ -12,6 +12,7 @@ for subj = 1:size(dataBase,2)
     % pre-allocation
     allERSP = cell(size(dataBase(subj).cc_epoch_sorted,3),size(dataBase(subj).cc_epoch_sorted,1));
     allERSPboot = cell(size(dataBase(subj).cc_epoch_sorted,3),size(dataBase(subj).cc_epoch_sorted,1));
+    del_stimp = zeros(size(dataBase(subj).cc_epoch_sorted,3),1);
     
     %% Choose stimulation from specific electrode
     for stimp=1:size(dataBase(subj).cc_epoch_sorted,3) % number for stim pair
@@ -20,7 +21,7 @@ for subj = 1:size(dataBase,2)
             tmpsig = squeeze(dataBase(subj).cc_epoch_sorted(chan,:,stimp,:));
             tmpsig=tmpsig(:,round(fs):round(3*fs)-1);                                             % get 2 seconds (1sec before stim,1 sec after)
             
-            if ~any(isnan(tmpsig)) % only run ERSP if there are 10 stimuli, no less
+            if ~any(isnan(tmpsig(:))) % only run ERSP if there are 10 stimuli, no less
                 EEG.pnts=size(tmpsig,2);                                                % Number of samples
                 EEG.srate=fs;                                                           % sample frequency
                 EEG.xmin=-1;                                                            % x axis limits
@@ -77,6 +78,8 @@ for subj = 1:size(dataBase,2)
                 clear ERSP
                 
             else
+                del_stimp(stimp) = 1;
+                
                 allERSPboot{stimp,chan} = [];                
                 allERSP{stimp,chan} = [];                
             end
@@ -84,18 +87,21 @@ for subj = 1:size(dataBase,2)
         
         if strcmp(cfg.saveERSP,'yes')
             
+            allERSPboot = allERSPboot(~del_stimp,:);
+            allERSP = allERSP(~del_stimp,:);
+            
             targetFolder = output;
             fileName=['/' dataBase(subj).sub_label,'_' dataBase(subj).ses_label,...
                 '_', dataBase(subj).task_label,'_',dataBase(subj).run_label '_ERSP.mat'];
-            cc_stimchans = dataBase(subj).cc_stimchans;
-            cc_stimsets = dataBase(subj).cc_stimsets;
+            cc_stimchans = dataBase(subj).cc_stimchans(~del_stimp,:);
+            cc_stimsets = dataBase(subj).cc_stimsets(~del_stimp,:);
             ch = dataBase(subj).ch;
             
             save([targetFolder,fileName], '-v7.3','allERSP', 'allERSPboot','times','freqs','cc_stimchans','cc_stimsets','ch');
         end
         
-        dataBase(subj).ERSP = allERSP;
-        dataBase(subj).ERSPboot = allERSPboot;
+        dataBase(subj).allERSP = allERSP;
+        dataBase(subj).allERSPboot = allERSPboot;
         dataBase(subj).times = times;
         dataBase(subj).freqs = freqs;
     end
