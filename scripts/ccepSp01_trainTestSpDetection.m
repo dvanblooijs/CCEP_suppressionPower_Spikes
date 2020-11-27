@@ -55,17 +55,11 @@ end
 
 [Y_alltrain,Y_alltest, Y_conc, Y] = determine_Target_SVM(dataBase,cfg);
 
-%% determine range of ERSPvalues
-
-% distribution_ERSPval(cfg,dataBase)
-
 %% step 1: train thresholds hysteresis : this takes a few hours
 % we vary the thresholds ThU and ThL to find the best thresholds for
 % detecting BBs in each patient. We then make a heatmap to find a threshold
 % that suits all three patients.
 
-trainPar.ThU = 0.1:0.1:0.9;  % range upper threshold hysteresis
-trainPar.ThL = 0.1:0.1:0.9;  % range lower threshold hysteresis
 trainPar.C = 2.^(-4:2:8); % range of BoxConstraint in svm model
 
 [train_threshold,train_threshold_all] = trainSVM_PowSup(cfg,dataBase,trainPar,Y_conc);
@@ -127,9 +121,12 @@ tStart = cell(size(cfg.train,2),1); tWidth = cell(size(cfg.train,2),1);
 fStart = cell(size(cfg.train,2),1); fWidth = cell(size(cfg.train,2),1);
 Area = cell(size(cfg.train,2),1);
 
-for i=1:size(cfg.train,2)
+for subj=1:size(cfg.train,2)
     
-    [Area{i}, tStart{i}, fStart{i}, tWidth{i}, fWidth{i}] = getfeaturesTrain(dataBase(cfg.train(i)),ThL_opt, ThU_opt);
+    [Area{subj}, tStart{subj}, fStart{subj}, tWidth{subj}, fWidth{subj},...
+        dataBase(subj).ERSP.Area, dataBase(subj).ERSP.tStart,  ...
+        dataBase(subj).ERSP.fStart, dataBase(subj).ERSP.tWidth, ...
+        dataBase(subj).ERSP.fWidth] = getfeaturesTrain(dataBase(cfg.train(subj)),ThL_opt, ThU_opt);
     
 end
 
@@ -152,7 +149,7 @@ X_train = X;
 % optimal SVM model
 SVMModel = fitcsvm(X_train, Y_alltrain, ...
     'Standardize',true,'ClassNames',{'0','1'},'KernelFunction', 'RBF', 'KernelScale', 'auto', ...
-    'Cost',[0 1;2 0],'BoxConstraint', C_opt);
+    'Cost',[0 1;4 0],'BoxConstraint', C_opt);
 %      'Cost',[0 1;4 0],'BoxConstraint', C_opt);
 %     'Prior','empirical','BoxConstraint', C_opt);
 
@@ -163,6 +160,9 @@ kfoldLoss(CVModel)
 
 % save SVMmodel
 pathname = cfg.SVMpath;
+trainPar.ThU_opt = ThU_opt;
+trainPar.ThL_opt = ThL_opt;
+traomPar.C_opt = C_opt;
 filename = sprintf('SVMmodel_trained_BB_%1.1f_%1.1f_%1.2f_%s.mat',ThU_opt,ThL_opt,C_opt,datestr(now,'yyyymmdd'));
 save(fullfile(pathname,filename),'SVMModel','trainPar')
 fprintf('SVMmodel is saved in %s\n',filename)
@@ -170,8 +170,12 @@ fprintf('SVMmodel is saved in %s\n',filename)
 %% test SVM model with one patient: RESP0690
 
 % detectPowSup(dataBase,cfg)
+subj = cfg.test;
 
-[Area, tStart, fStart, tWidth, fWidth] = getfeaturesTrain(dataBase(cfg.test),ThL_opt, ThU_opt);
+[Area, tStart, fStart, tWidth, fWidth,...
+    dataBase(subj).ERSP.Area, dataBase(subj).ERSP.tStart,  ...
+        dataBase(subj).ERSP.fStart, dataBase(subj).ERSP.tWidth, ...
+        dataBase(subj).ERSP.fWidth] = getfeaturesTrain(dataBase(cfg.test),ThL_opt, ThU_opt);
 
 % X-values in Support vector machine
 X = [];
@@ -200,43 +204,59 @@ else
     F = 2 * (prec * sens)/(prec + sens);
 end
 
-%% detect ERSPs
+%% check FN or FP
 
-for subj = 1:size(dataBase,2)
-    
-    [Area_conc, tStart_conc, fStart_conc, tWidth_conc, fWidth_conc, ...
-        dataBase(subj).ERSP.Area, dataBase(subj).ERSP.tStart,  ...
-        dataBase(subj).ERSP.fStart, dataBase(subj).ERSP.tWidth, ...
-        dataBase(subj).ERSP.fWidth] = getfeaturesTrain(dataBase(subj),ThL_opt, ThU_opt);
-    
-    % store area and duration in X
-    X = [];
-    X(:,1:2) = Area_conc;                    
-    X(:,3:4) = tStart_conc;
-    X(:,5:6) = fStart_conc;
-    X(:,7:8) = tWidth_conc;
-    X(:,9:10) = fWidth_conc;
-    
-    label_raw = predict(SVMModel,X);
-    label_raw = str2double(label_raw);
-    
-    dataBase(subj).ERSP.detected = reshape(label_raw,size(dataBase(subj).ERSP.allERSPboot));
-   fprintf('Detection of ERSPs in %s is completed\n',dataBase(subj).sub_label) 
-   
-   
+mode = input('What would you like to check? [FP/FN/TP/TN]: ','s');
+
+if strcmp(mode,'FP')
+    lookPic = reshape((label==1 & valTarg == 0),size(dataBase(subj).ERSP.allERSP));
+elseif strcmp(mode,'FN')
+    lookPic = reshape((label==0 & valTarg == 1),size(dataBase(subj).ERSP.allERSP));
+elseif strcmp(mode,'TP')
+    lookPic = reshape((label==1 & valTarg == 1),size(dataBase(subj).ERSP.allERSP));   
+elseif strcmp(mode,'TN')
+     lookPic = reshape((label==0 & valTarg == 0),size(dataBase(subj).ERSP.allERSP));   
 end
 
-disp('Detection is completed.')
+visualRating_tfspes(dataBase,subj,lookPic);
 
-%% check detected ERSPs - optional
-
-dataBase = visualRating_tfspes(dataBase,subj);
-checked = dataBase(subj).ERSP.checked;
-
-output = fullfile(cfg.TFSPESoutput,dataBase(subj).sub_label,dataBase(subj).ses_label,...
-    [dataBase(subj).task_label,'_',dataBase(subj).run_label]);
-
-filename = ['/' dataBase(subj).sub_label,'_' dataBase(subj).ses_label,...
-    '_', dataBase(subj).task_label,'_',dataBase(subj).run_label '_ERSP.mat'];
-
-save([output,filename],'checked','-append')
+% %% detect ERSPs
+% 
+% for subj = 1:size(dataBase,2)
+%     
+%     [Area_conc, tStart_conc, fStart_conc, tWidth_conc, fWidth_conc, ...
+%         dataBase(subj).ERSP.Area, dataBase(subj).ERSP.tStart,  ...
+%         dataBase(subj).ERSP.fStart, dataBase(subj).ERSP.tWidth, ...
+%         dataBase(subj).ERSP.fWidth] = getfeaturesTrain(dataBase(subj),ThL_opt, ThU_opt);
+%     
+%     % store area and duration in X
+%     X = [];
+%     X(:,1:2) = Area_conc;                    
+%     X(:,3:4) = tStart_conc;
+%     X(:,5:6) = fStart_conc;
+%     X(:,7:8) = tWidth_conc;
+%     X(:,9:10) = fWidth_conc;
+%     
+%     label_raw = predict(SVMModel,X);
+%     label_raw = str2double(label_raw);
+%     
+%     dataBase(subj).ERSP.detected = reshape(label_raw,size(dataBase(subj).ERSP.allERSPboot));
+%    fprintf('Detection of ERSPs in %s is completed\n',dataBase(subj).sub_label) 
+%    
+%    
+% end
+% 
+% disp('Detection is completed.')
+% 
+% %% check detected ERSPs - optional
+% 
+% dataBase = visualRating_tfspes(dataBase,subj);
+% checked = dataBase(subj).ERSP.checked;
+% 
+% output = fullfile(cfg.TFSPESoutput,dataBase(subj).sub_label,dataBase(subj).ses_label,...
+%     [dataBase(subj).task_label,'_',dataBase(subj).run_label]);
+% 
+% filename = ['/' dataBase(subj).sub_label,'_' dataBase(subj).ses_label,...
+%     '_', dataBase(subj).task_label,'_',dataBase(subj).run_label '_ERSP.mat'];
+% 
+% save([output,filename],'checked','-append')
