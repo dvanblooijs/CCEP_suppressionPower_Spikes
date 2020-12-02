@@ -2,9 +2,9 @@
 % author: Dorien van Blooijs
 % date: June 2019
 
-function dataBase = load_ECoGdata(cfg)
+function dataBase = load_ECoGdata(myDataPath,cfg)
 
-dataPath = cfg.dataPath;
+dataPath = myDataPath.dataPath;
 sub_labels = cfg.sub_labels;
 ses_label = cfg.ses_label;
 task_label = cfg.task_label;
