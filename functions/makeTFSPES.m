@@ -4,21 +4,28 @@
 % made BIDS compatible by: Dorien van Blooijs
 % date: July 2019
 
-function dataBase = makeTFSPES(dataBase,cfg)
+function dataBase = makeTFSPES(dataBase,myDataPath,cfg)
 
 for subj = 1:size(dataBase,2)
     fs = dataBase(subj).ccep_header.Fs;
     
+    % used rereferenced or not rereferenced data
+    if cfg.reref == 1
+        cc_epoch_sorted = dataBase(subj).cc_epoch_sorted_reref;
+    else
+        cc_epoch_sorted = dataBase(subj).cc_epoch_sorted;
+    end
+
     % pre-allocation
-    allERSP = cell(size(dataBase(subj).cc_epoch_sorted,3),size(dataBase(subj).cc_epoch_sorted,1));
-    allERSPboot = cell(size(dataBase(subj).cc_epoch_sorted,3),size(dataBase(subj).cc_epoch_sorted,1));
-    del_stimp = zeros(size(dataBase(subj).cc_epoch_sorted,3),1);
+    allERSP = cell(size(cc_epoch_sorted,3),size(cc_epoch_sorted,1));
+    allERSPboot = cell(size(cc_epoch_sorted,3),size(cc_epoch_sorted,1));
+    del_stimp = zeros(size(cc_epoch_sorted,3),1);
     
     %% Choose stimulation from specific electrode
-    for stimp=1:size(dataBase(subj).cc_epoch_sorted,3) % number for stim pair
-        for chan = 1:size(dataBase(subj).cc_epoch_sorted,1) % number for recording electrode
+    for stimp=1:size(cc_epoch_sorted,3) % number for stim pair
+        for chan = 1:size(cc_epoch_sorted,1) % number for recording electrode
             
-            tmpsig = squeeze(dataBase(subj).cc_epoch_sorted(chan,:,stimp,:));
+            tmpsig = squeeze(cc_epoch_sorted(chan,:,stimp,:));
             tmpsig=tmpsig(:,round(fs):round(3*fs)-1);                                             % get 2 seconds (1sec before stim,1 sec after)
             
             if ~any(isnan(tmpsig(:))) % only run ERSP if there are 10 stimuli, no less
@@ -30,8 +37,9 @@ for subj = 1:size(dataBase,2)
                 tmpsig = reshape(tmpsig', [1, size(tmpsig,2)*10]);                       % Get all 10 stim in 1 row
                 
                 %%Define parameters for EEGlab
-                cycles = [3 0.8];
+                cfg.cycles = [3 0.8];
                 frange = [10 250];                                                      % frequency range to plot/calculate spectrogram
+                cfg.alpha = 0.05;
                 
                 pointrange1 = round(max((tlimits(1)/1000-EEG.xmin)*EEG.srate, 1));
                 pointrange2 = round(min((tlimits(2)/1000-EEG.xmin)*EEG.srate, EEG.pnts));
@@ -44,8 +52,8 @@ for subj = 1:size(dataBase,2)
                 % Michelle used gjnewtimef but the results are equal so I choose to use newtimef
                 %             [ERSPgj,~,powbasegj,timesgj,freqsgj,erspbootgj,~]=gjnewtimef(tmpsig(:,:),length(pointrange),[tlimits(1) tlimits(2)],EEG.srate,cycles,'type','coher','title',chlabel, 'padratio',4,...
                 %                 'plotphase','off','freqs',frange,'plotitc','off','newfig','off','erspmax',15','alpha',0.05,'baseline',[-1000 -100]); % change alpha number to NaN to turn bootstrapping off
-                [ERSP,~,~,times,freqs,erspboot,~]=newtimef(tmpsig(:,:),length(pointrange),[tlimits(1) tlimits(2)],EEG.srate,cycles,'type','coher','title',chlabel, 'padratio',4,...
-                    'plotphase','off','freqs',frange,'plotitc','off','newfig','off','erspmax',15,'alpha',0.05,'baseline',[-1000 -100]); % change alpha number to NaN to turn bootstrapping off
+                [ERSP,~,~,times,freqs,erspboot,~]=newtimef(tmpsig(:,:),length(pointrange),[tlimits(1) tlimits(2)],EEG.srate,cfg.cycles,'type','coher','title',chlabel, 'padratio',4,...
+                    'plotphase','off','freqs',frange,'plotitc','off','newfig','off','erspmax',15,'alpha',cfg.alpha,'baseline',[-1000 -100]); % change alpha number to NaN to turn bootstrapping off
                 
                 figsize
                 
@@ -54,7 +62,7 @@ for subj = 1:size(dataBase,2)
                 
                 if strcmp(cfg.saveERSP,'yes')
                     % Create a name for a subfolder within output
-                    output = fullfile(cfg.TFSPESoutput,dataBase(subj).sub_label,dataBase(subj).ses_label,...
+                    output = fullfile(myDataPath.TFSPESoutput,dataBase(subj).sub_label,dataBase(subj).ses_label,...
                         dataBase(subj).run_label);
                     
                     newSubFolder = sprintf('%s/Stimpair%s-%s/', output,...
@@ -97,7 +105,7 @@ for subj = 1:size(dataBase,2)
             cc_stimsets = dataBase(subj).cc_stimsets(~del_stimp,:);
             ch = dataBase(subj).ch;
             
-            save([targetFolder,fileName], '-v7.3','allERSP', 'allERSPboot','times','freqs','cc_stimchans','cc_stimsets','ch');
+            save([targetFolder,fileName], '-v7.3','allERSP', 'allERSPboot','times','freqs','cc_stimchans','cc_stimsets','ch','cfg');
         end
         
         dataBase(subj).allERSP = allERSP;
