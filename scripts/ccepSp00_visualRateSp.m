@@ -1,7 +1,7 @@
 %% settings for constructing SVM
 clc
 clear
-cfg = setLocalDataPath(1);
+myDataPath = setLocalDataPath(1);
 
 %%
 
@@ -23,7 +23,7 @@ for subj = 1:size(cfg.sub_labels,2)
     dataBase(subj).task_label = cfg.task_label;
     dataBase(subj).run_label = cfg.run_label{subj};
     
-    dataBase(subj).ERSP = load(fullfile(cfg.TFSPESoutput, dataBase(subj).sub_label,...
+    dataBase(subj).ERSP = load(fullfile(myDataPath.TFSPESoutput, dataBase(subj).sub_label,...
         dataBase(subj).ses_label,dataBase(subj).run_label,...
         [dataBase(subj).sub_label, '_',dataBase(subj).ses_label,'_' dataBase(subj).task_label,...
         '_', dataBase(subj).run_label,'_ERSP.mat']));
@@ -35,7 +35,7 @@ disp('All ERSPs are loaded')
 % - There should be no blue region before the stimulus.
 % - There should be a clear blue region after the stimulus. 
 
-subj = 4; 
+subj = input('Which subject would you like to annotate?: '); 
 vis_BB = zeros(size(dataBase(subj).ERSP.allERSPboot));
 n=1;
 
@@ -65,7 +65,7 @@ disp('Visual rating in completed')
 
 s = input('Write down the initials of the person who did the visual rating [DvB/MvdS]: ','s');
 
-folderName = fullfile(cfg.dir_visrate,[cfg.sub_labels{subj},'_',cfg.ses_label,'_',cfg.run_label{subj},'_visBB_',s,'.mat']);
+folderName = fullfile(myDataPath.dir_visrate,[cfg.sub_labels{subj},'_',cfg.ses_label,'_',cfg.run_label{subj},'_visBB_',s,'.mat']);
 
 sub_label = dataBase(subj).sub_label;
 ses_label = dataBase(subj).ses_label;
