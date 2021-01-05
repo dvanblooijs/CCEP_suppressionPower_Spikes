@@ -68,29 +68,19 @@ disp('Training completed')
 
 %% step 1b: make heatmaps for each patient and for patients combined
 
-mode = input('Visualize Loss or sensitivity or specificity or precision or F-value [L/sens/spec/prec/F]: ','s');
-par1 = input('Visualize parameter1 (ThU or ThL or C) [ThU/ThL/C]: ','s');
-par2 = input('Visualize parameter2 (ThU or ThL or C) [ThU/ThL/C]: ','s');
-
-heatmap_trainSVM(cfg,dataBase,train_threshold,trainPar,mode,par1,par2)
-heatmap_trainSVM(cfg,dataBase,train_threshold_all,trainPar,mode,par1,par2)
+plotPerformance_trainSVM(train_threshold,trainPar)
 
 %% find optimal values for each individual patient and all patients in train dataset combined
 
-clc
 trainPar.mode = input('Find optimal for each patient [optimal], or define an option yourself [option]: ','s');
 
 if strcmp(trainPar.mode,'option')
-    trainPar.ThU_opt = str2double(input('Value of ThU: ','s'));
-    trainPar.ThL_opt = str2double(input('Value of ThL: ','s'));
     trainPar.C_opt = str2double(input('Value of C: ','s'));
     
     optTrainPar_SVM(cfg,dataBase,trainPar,train_threshold,subj)
     optTrainPar_SVM(cfg,dataBase,trainPar,train_threshold_all,1)
     
 else
-    trainPar.ThU_opt = [];
-    trainPar.ThL_opt = [];
     trainPar.C_opt = [];
     
     for n = 1:size(cfg.train,2)
@@ -105,9 +95,7 @@ end
 % we now train an SVMmodel with optimal thresholds as determined in step 1
 
 % optimal value upper en lower threshold (determined in step1)
-ThU_opt = 0.7;
-ThL_opt = 0.4;
-C_opt = 1;
+C_opt = 0.25;
 
 % all images of patients in train set
 n = NaN(size(cfg.train,2),1);
@@ -126,7 +114,7 @@ for subj=1:size(cfg.train,2)
     [Area{subj}, tStart{subj}, fStart{subj}, tWidth{subj}, fWidth{subj},...
         dataBase(subj).ERSP.Area, dataBase(subj).ERSP.tStart,  ...
         dataBase(subj).ERSP.fStart, dataBase(subj).ERSP.tWidth, ...
-        dataBase(subj).ERSP.fWidth] = getfeaturesTrain(dataBase(cfg.train(subj)),ThL_opt, ThU_opt);
+        dataBase(subj).ERSP.fWidth] = getfeaturesTrain(dataBase(cfg.train(subj)));
     
 end
 
@@ -149,7 +137,7 @@ X_train = X;
 % optimal SVM model
 SVMModel = fitcsvm(X_train, Y_alltrain, ...
     'Standardize',true,'ClassNames',{'0','1'},'KernelFunction', 'RBF', 'KernelScale', 'auto', ...
-    'Cost',[0 1;4 0],'BoxConstraint', C_opt);
+    'Cost',[0 1;3 0],'BoxConstraint', C_opt);
 %      'Cost',[0 1;4 0],'BoxConstraint', C_opt);
 %     'Prior','empirical','BoxConstraint', C_opt);
 
@@ -160,10 +148,8 @@ kfoldLoss(CVModel)
 
 % save SVMmodel
 pathname = cfg.SVMpath;
-trainPar.ThU_opt = ThU_opt;
-trainPar.ThL_opt = ThL_opt;
-traomPar.C_opt = C_opt;
-filename = sprintf('SVMmodel_trained_BB_%1.1f_%1.1f_%1.2f_%s.mat',ThU_opt,ThL_opt,C_opt,datestr(now,'yyyymmdd'));
+trainPar.C_opt = C_opt;
+filename = sprintf('SVMmodel_trained_BB_%1.2f_%s.mat',C_opt,datestr(now,'yyyymmdd'));
 save(fullfile(pathname,filename),'SVMModel','trainPar')
 fprintf('SVMmodel is saved in %s\n',filename)
 
@@ -175,7 +161,7 @@ subj = cfg.test;
 [Area, tStart, fStart, tWidth, fWidth,...
     dataBase(subj).ERSP.Area, dataBase(subj).ERSP.tStart,  ...
         dataBase(subj).ERSP.fStart, dataBase(subj).ERSP.tWidth, ...
-        dataBase(subj).ERSP.fWidth] = getfeaturesTrain(dataBase(cfg.test),ThL_opt, ThU_opt);
+        dataBase(subj).ERSP.fWidth] = getfeaturesTrain(dataBase(cfg.test));
 
 % X-values in Support vector machine
 X = [];
