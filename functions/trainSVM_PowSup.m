@@ -75,7 +75,7 @@ for subj = cfg.train
                     
                     anSVMModel = fitcsvm(trainData, trainTarg, ...
                         'Standardize',true,'ClassNames',{'0','1'},'KernelFunction', 'RBF', 'KernelScale', 'auto', ...
-                        'Cost',[0 1;2 0],'BoxConstraint', C);
+                        'Cost',[0 1;3 0],'BoxConstraint', C);
                     
                     L(k) = loss(anSVMModel,valData, valTarg);
                     label_raw = predict(anSVMModel,valData);
@@ -121,6 +121,7 @@ for subj = cfg.train
     train_threshold(subj).spec  = spec_all;
     train_threshold(subj).prec  = prec_all;
     train_threshold(subj).F     = F_all;
+    train_threshold(subj).X     = X;
     
     L_comb(subj,:)        = L_all;
     sens_comb(subj,:)     = sens_all;
@@ -130,10 +131,10 @@ for subj = cfg.train
 end
 
 % combine all patients
-train_threshold_all.L       = squeeze(median(L_comb,1));
-train_threshold_all.sens    = squeeze(median(sens_comb,1));
-train_threshold_all.spec    = squeeze(median(spec_comb,1));
-train_threshold_all.prec    = squeeze(median(prec_comb,1));
-train_threshold_all.F       = squeeze(median(F_comb,1));
+train_threshold_all.L       = squeeze(mean(L_comb,1));
+train_threshold_all.sens    = squeeze(mean(sens_comb,1));
+train_threshold_all.spec    = squeeze(mean(spec_comb,1));
+train_threshold_all.prec    = squeeze(mean(prec_comb,1));
+train_threshold_all.F       = squeeze(mean(F_comb,1));
 
 end
