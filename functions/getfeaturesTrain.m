@@ -32,14 +32,16 @@ for stimpair=1:size(allERSP,1)                            % for each stimulation
                 
         % delineate the power suppression in bootstrapped ERSP
         ERSP = allERSP{stimpair,chan};
-        idx_ERSP = ERSP<0;
+        ERSPfilt = imgaussfilt(ERSP,0.5,'Filterdomain','spatial');
+
+        idx_ERSP = ERSPfilt<0;
         C = [0.9 0.9 0.9]; % light grey
 
 %         plot_ERSP(subject.ERSP,stimpair,chan)
 %         hold on
                 
         % pre-allocation
-        hys_div = NaN(2,size(ERSP,1),size(ERSP,2)/2);
+        hys_div = NaN(2,size(ERSPfilt,1),size(ERSPfilt,2)/2);
         for win = 1:2 % pre and post stimulation
             hys_div(win,:,:) = idx_ERSP(:,time(win,:));
             
@@ -64,41 +66,41 @@ for stimpair=1:size(allERSP,1)                            % for each stimulation
             else
                 [~,sort_idx] = sort([stats.Area],'descend');
                 
-                x1_lo = stats(sort_idx(1)).BoundingBox(1);
-                x1_hi = stats(sort_idx(1)).BoundingBox(1) + stats(sort_idx(1)).BoundingBox(3);
-                x2_lo = stats(sort_idx(2)).BoundingBox(1);
-                x2_hi = stats(sort_idx(2)).BoundingBox(1) + stats(sort_idx(2)).BoundingBox(3);
-                y1_lo = stats(sort_idx(1)).BoundingBox(2);
-                y1_hi = stats(sort_idx(1)).BoundingBox(2) + stats(sort_idx(1)).BoundingBox(4);
-                y2_lo = stats(sort_idx(2)).BoundingBox(2);
-                y2_hi = stats(sort_idx(2)).BoundingBox(2) + stats(sort_idx(2)).BoundingBox(4);
-               
+%                 x1_lo = stats(sort_idx(1)).BoundingBox(1);
+%                 x1_hi = stats(sort_idx(1)).BoundingBox(1) + stats(sort_idx(1)).BoundingBox(3);
+%                 x2_lo = stats(sort_idx(2)).BoundingBox(1);
+%                 x2_hi = stats(sort_idx(2)).BoundingBox(1) + stats(sort_idx(2)).BoundingBox(3);
+%                 y1_lo = stats(sort_idx(1)).BoundingBox(2);
+%                 y1_hi = stats(sort_idx(1)).BoundingBox(2) + stats(sort_idx(1)).BoundingBox(4);
+%                 y2_lo = stats(sort_idx(2)).BoundingBox(2);
+%                 y2_hi = stats(sort_idx(2)).BoundingBox(2) + stats(sort_idx(2)).BoundingBox(4);
+%                
                 
                 % if the largest and second largest area are in the same
                 % time window, it might be that these are split due to the
                 % continuous 50Hz noise
-                if x2_lo < x1_hi && x2_hi > x1_lo && ...% the second largest area must start before the largest area end, and must stop after the largest area start
-                        (max([y1_lo y2_lo]) - min([y1_hi y2_hi])) <50 % the difference between the higher and lower freq must be <50Hz
-                
-                    for i=1:2
-                        y_lo = stats(sort_idx(i)).BoundingBox(2);
-                        y_hi = stats(sort_idx(i)).BoundingBox(2) + stats(sort_idx(i)).BoundingBox(4);
-                        x_lo = stats(sort_idx(i)).BoundingBox(1);
-                        x_hi = stats(sort_idx(i)).BoundingBox(1) + stats(sort_idx(i)).BoundingBox(3);
-                        
-                        image = double(stats(sort_idx(i)).FilledImage);
-                        image(image==1) = 2;
-                        
-                        hys_div(win,ceil(y_lo):floor(y_hi),ceil(x_lo):floor(x_hi)) = image;
-                    end
-                    
-                    stats = regionprops(squeeze(hys_div(win,:,:)),'Area','BoundingBox','FilledImage');
-                    
-                    idx = 2;
-                else
-                    
+%                 if x2_lo < x1_hi && x2_hi > x1_lo && ...% the second largest area must start before the largest area end, and must stop after the largest area start
+%                         (max([y1_lo y2_lo]) - min([y1_hi y2_hi])) <50 % the difference between the higher and lower freq must be <50Hz
+%                 
+%                     for i=1:2
+%                         y_lo = stats(sort_idx(i)).BoundingBox(2);
+%                         y_hi = stats(sort_idx(i)).BoundingBox(2) + stats(sort_idx(i)).BoundingBox(4);
+%                         x_lo = stats(sort_idx(i)).BoundingBox(1);
+%                         x_hi = stats(sort_idx(i)).BoundingBox(1) + stats(sort_idx(i)).BoundingBox(3);
+%                         
+%                         image = double(stats(sort_idx(i)).FilledImage);
+%                         image(image==1) = 2;
+%                         
+%                         hys_div(win,ceil(y_lo):floor(y_hi),ceil(x_lo):floor(x_hi)) = image;
+%                     end
+%                     
+%                     stats = regionprops(squeeze(hys_div(win,:,:)),'Area','BoundingBox','FilledImage');
+%                     
+%                     idx = 2;
+%                 else
+%                     
                     idx = sort_idx(1);
-                end
+%                 end
                     
                 Area{win}(stimpair,chan) = stats(idx).Area;
                 tStart{win}(stimpair,chan) = stats(idx).BoundingBox(1);
@@ -124,6 +126,7 @@ for stimpair=1:size(allERSP,1)                            % for each stimulation
 %                 h = fWidth{win}(stimpair,chan)*pixelHeigth;
 %                 
 %                 rectangle('Position',[x1 y1 w h],'EdgeColor',C),
+%                 text(x1+0.5*w,y1+0.5*h,num2str(Area{win}(stimpair,chan)))
 %             end
         end
 %         hold off
