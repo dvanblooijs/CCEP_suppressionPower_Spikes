@@ -4,7 +4,7 @@
 %% settings for constructing SVM
 clc
 clear
-cfg = setLocalDataPath(1);
+myDataPath = setLocalDataPath(1);
 
 %%
 
@@ -26,7 +26,7 @@ for subj = 1:size(cfg.sub_labels,2)
     dataBase(subj).task_label = cfg.task_label;
     dataBase(subj).run_label = cfg.run_label{subj};
     
-    dataBase(subj).ERSP = load(fullfile(cfg.TFSPESoutput, dataBase(subj).sub_label,...
+    dataBase(subj).ERSP = load(fullfile(myDataPath.TFSPESoutput, dataBase(subj).sub_label,...
         dataBase(subj).ses_label,dataBase(subj).run_label,...
         [dataBase(subj).sub_label, '_',dataBase(subj).ses_label,'_' dataBase(subj).task_label,...
         '_', dataBase(subj).run_label,'_ERSP.mat']));
@@ -37,8 +37,8 @@ disp('All ERSPs are loaded')
 %% load visual rating
 
 for subj = 1:size(dataBase,2)
-    folderName1 = fullfile(cfg.dir_visrate,[cfg.sub_labels{subj},'_',cfg.ses_label,'_',cfg.run_label{subj},'_visBB_DvB.mat']);
-    folderName2 = fullfile(cfg.dir_visrate,[cfg.sub_labels{subj},'_',cfg.ses_label,'_',cfg.run_label{subj},'_visBB_MvdS.mat']);
+    folderName1 = fullfile(myDataPath.dir_visrate,[cfg.sub_labels{subj},'_',cfg.ses_label,'_',cfg.run_label{subj},'_visBB_DvB.mat']);
+    folderName2 = fullfile(myDataPath.dir_visrate,[cfg.sub_labels{subj},'_',cfg.ses_label,'_',cfg.run_label{subj},'_visBB_MvdS.mat']);
 
     dataBase(subj).visBB1 = load(folderName1);
     dataBase(subj).visBB2 = load(folderName2);
@@ -53,7 +53,7 @@ end
 % - There should be no blue region before the stimulus.
 % - There should be a clear blue region after the stimulus. 
 
-subj = 4; 
+subj = input('Which subject would you like to annotate?: '); 
 vis_BB_combined = zeros(size(dataBase(subj).ERSP.allERSPboot));
 n=1;
 
@@ -83,7 +83,7 @@ disp('Visual rating in completed')
 
 %% save combined visual rating
 
-folderName = fullfile(cfg.dir_visrate,[cfg.sub_labels{subj},'_',cfg.ses_label,'_',cfg.run_label{subj},'_visBB_combined.mat']);
+folderName = fullfile(myDataPath.dir_visrate,[cfg.sub_labels{subj},'_',cfg.ses_label,'_',cfg.run_label{subj},'_visBB_combined.mat']);
 
 sub_label = dataBase(subj).sub_label;
 ses_label = dataBase(subj).ses_label;
