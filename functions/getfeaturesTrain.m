@@ -6,19 +6,23 @@
 function [Area_conc, tStart_conc, fStart_conc, tWidth_conc, fWidth_conc, ...
     Area, tStart,  fStart, tWidth, fWidth] = getfeaturesTrain(subject)
 
+% extract variables from subject
+allERSP = subject.ERSP.allERSPboot;
+stimpchan = subject.ERSP.cc_stimsets;
+idx_ch_bad = subject.idx_ch_bad;
 times = subject.ERSP.times;
-freqs = subject.ERSP.freqs;
-pixelWidth = (times(end)-times(1))/(size(times,2)-1);
-pixelHeigth = (freqs(end)-freqs(1))/(size(freqs,2)-1);
 
 % Divide hys in pre- and post stimulation
 time(1,:) = times<0;
 time(2,:) = times>0;
-t(1) = find(times<0,1,'first');
-t(2) = find(times>0,1,'first');
 
-allERSP = subject.ERSP.allERSPboot;
-stimpchan = subject.ERSP.cc_stimsets;
+%%% variables needed to plot ERSP with bounding box
+% freqs = subject.ERSP.freqs;
+% pixelWidth = (times(end)-times(1))/(size(times,2)-1);
+% pixelHeigth = (freqs(end)-freqs(1))/(size(freqs,2)-1);
+% t(1) = find(times<0,1,'first');
+% t(2) = find(times>0,1,'first');
+% C = [0.9 0.9 0.9]; % light grey
 
 % pre-allocation
 Area = cell(2,1);
@@ -27,29 +31,37 @@ fStart = cell(2,1);
 tWidth = cell(2,1);
 fWidth = cell(2,1);
 
-for stimpair=1:size(allERSP,1)                            % for each stimulation pair
-    for chan=1:size(allERSP,2)                        % for each recording electrode
+for stimpair = 1:size(allERSP,1) % for each stimulation pair
+    for chan = 1:size(allERSP,2) % for each recording electrode
                 
         % delineate the power suppression in bootstrapped ERSP
         ERSP = allERSP{stimpair,chan};
         ERSPfilt = imgaussfilt(ERSP,0.5,'Filterdomain','spatial');
 
         idx_ERSP = ERSPfilt<0;
-        C = [0.9 0.9 0.9]; % light grey
 
-%         plot_ERSP(subject.ERSP,stimpair,chan)
-%         hold on
+        
+        %%% plot ERSP (optionally)
+        % plot_ERSP(subject.ERSP,stimpair,chan)
+        % hold on
                 
         % pre-allocation
         hys_div = NaN(2,size(ERSPfilt,1),size(ERSPfilt,2)/2);
         for win = 1:2 % pre and post stimulation
             hys_div(win,:,:) = idx_ERSP(:,time(win,:));
             
-            %%Get area and other features
+            %%% Get area and other features
             stats = regionprops(logical(squeeze(hys_div(win,:,:))),'Area','BoundingBox','FilledImage');
                                   
-            %%Get area and duration in a double           
-            if ismember(chan,stimpchan(stimpair,:))           % don't take recording which is in stimulus pair
+            %%% Get area and duration in a double           
+            if ismember(chan,stimpchan(stimpair,:)) % fill with NaNs when in stimulus pair
+                Area{win}(stimpair,chan) = NaN;
+                tStart{win}(stimpair,chan) = NaN;
+                fStart{win}(stimpair,chan) = NaN;
+                tWidth{win}(stimpair,chan) = NaN;
+                fWidth{win}(stimpair,chan) = NaN;
+                
+            elseif idx_ch_bad(chan) == 1 % fill with NaNs when bad channel (noisy)
                 Area{win}(stimpair,chan) = NaN;
                 tStart{win}(stimpair,chan) = NaN;
                 fStart{win}(stimpair,chan) = NaN;
@@ -64,44 +76,10 @@ for stimpair=1:size(allERSP,1)                            % for each stimulation
                 fWidth{win}(stimpair,chan) = 0;
                 
             else
+                % find largest area
                 [~,sort_idx] = sort([stats.Area],'descend');
+                idx = sort_idx(1);
                 
-%                 x1_lo = stats(sort_idx(1)).BoundingBox(1);
-%                 x1_hi = stats(sort_idx(1)).BoundingBox(1) + stats(sort_idx(1)).BoundingBox(3);
-%                 x2_lo = stats(sort_idx(2)).BoundingBox(1);
-%                 x2_hi = stats(sort_idx(2)).BoundingBox(1) + stats(sort_idx(2)).BoundingBox(3);
-%                 y1_lo = stats(sort_idx(1)).BoundingBox(2);
-%                 y1_hi = stats(sort_idx(1)).BoundingBox(2) + stats(sort_idx(1)).BoundingBox(4);
-%                 y2_lo = stats(sort_idx(2)).BoundingBox(2);
-%                 y2_hi = stats(sort_idx(2)).BoundingBox(2) + stats(sort_idx(2)).BoundingBox(4);
-%                
-                
-                % if the largest and second largest area are in the same
-                % time window, it might be that these are split due to the
-                % continuous 50Hz noise
-%                 if x2_lo < x1_hi && x2_hi > x1_lo && ...% the second largest area must start before the largest area end, and must stop after the largest area start
-%                         (max([y1_lo y2_lo]) - min([y1_hi y2_hi])) <50 % the difference between the higher and lower freq must be <50Hz
-%                 
-%                     for i=1:2
-%                         y_lo = stats(sort_idx(i)).BoundingBox(2);
-%                         y_hi = stats(sort_idx(i)).BoundingBox(2) + stats(sort_idx(i)).BoundingBox(4);
-%                         x_lo = stats(sort_idx(i)).BoundingBox(1);
-%                         x_hi = stats(sort_idx(i)).BoundingBox(1) + stats(sort_idx(i)).BoundingBox(3);
-%                         
-%                         image = double(stats(sort_idx(i)).FilledImage);
-%                         image(image==1) = 2;
-%                         
-%                         hys_div(win,ceil(y_lo):floor(y_hi),ceil(x_lo):floor(x_hi)) = image;
-%                     end
-%                     
-%                     stats = regionprops(squeeze(hys_div(win,:,:)),'Area','BoundingBox','FilledImage');
-%                     
-%                     idx = 2;
-%                 else
-%                     
-                    idx = sort_idx(1);
-%                 end
-                    
                 Area{win}(stimpair,chan) = stats(idx).Area;
                 tStart{win}(stimpair,chan) = stats(idx).BoundingBox(1);
                 fStart{win}(stimpair,chan) = stats(idx).BoundingBox(2);
@@ -109,8 +87,9 @@ for stimpair=1:size(allERSP,1)                            % for each stimulation
                 fWidth{win}(stimpair,chan) = stats(idx).BoundingBox(4);
             end
                         
+            %%% plot bounding box in ERSP plot (optionally)
 %             if ~isnan(tStart{win}(stimpair,chan)) 
-%                 % plot bounding box on largest power suppression
+                % plot bounding box on largest power suppression
 %                 if tStart{win}(stimpair,chan) > 0.5
 %                     x1 = (times(floor(tStart{win}(stimpair,chan)+t(win)-1)) + times(ceil(tStart{win}(stimpair,chan)+t(win)-1)))/2;
 %                 else
@@ -128,12 +107,14 @@ for stimpair=1:size(allERSP,1)                            % for each stimulation
 %                 rectangle('Position',[x1 y1 w h],'EdgeColor',C),
 %                 text(x1+0.5*w,y1+0.5*h,num2str(Area{win}(stimpair,chan)))
 %             end
+
         end
 %         hold off
 %         pause
     end
 end
 
+% concatenate into two vectors [channels*stimuli x 2] (pre- and post-stimulus)
 Area_conc = [reshape(Area{1},numel(Area{1}),1),reshape(Area{2},numel(Area{2}),1)];
 tStart_conc = [reshape(tStart{1},numel(tStart{1}),1),reshape(tStart{2},numel(tStart{2}),1)];
 fStart_conc = [reshape(fStart{1},numel(fStart{1}),1),reshape(fStart{2},numel(fStart{2}),1)];
