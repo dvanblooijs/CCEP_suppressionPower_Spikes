@@ -3,8 +3,7 @@
 % made BIDS compatible by Dorien van Blooijs
 % september 2019
 
-function [Area_conc, tStart_conc, fStart_conc, tWidth_conc, fWidth_conc, ...
-    Area, tStart,  fStart, tWidth, fWidth] = getfeaturesTrain(subject)
+function detPar = getfeaturesTrain(subject)
 
 % extract variables from subject
 allERSP = subject.ERSP.allERSPboot;
@@ -122,9 +121,9 @@ for stimpair = 1:size(allERSP,1) % for each stimulation pair
 end
 
 % concatenate into two vectors [channels*stimuli x 2] (pre- and post-stimulus)
-Area_conc = [reshape(Area{1},numel(Area{1}),1),reshape(Area{2},numel(Area{2}),1)];
-tStart_conc = [reshape(tStart{1},numel(tStart{1}),1),reshape(tStart{2},numel(tStart{2}),1)];
-fStart_conc = [reshape(fStart{1},numel(fStart{1}),1),reshape(fStart{2},numel(fStart{2}),1)];
-tWidth_conc = [reshape(tWidth{1},numel(tWidth{1}),1),reshape(tWidth{2},numel(tWidth{2}),1)];
-fWidth_conc = [reshape(fWidth{1},numel(fWidth{1}),1),reshape(fWidth{2},numel(fWidth{2}),1)];
+detPar.Area_conc = [reshape(Area{1},numel(Area{1}),1),reshape(Area{2},numel(Area{2}),1)];
+detPar.tStart_conc = [reshape(tStart{1},numel(tStart{1}),1),reshape(tStart{2},numel(tStart{2}),1)];
+detPar.fStart_conc = [reshape(fStart{1},numel(fStart{1}),1),reshape(fStart{2},numel(fStart{2}),1)];
+detPar.tWidth_conc = [reshape(tWidth{1},numel(tWidth{1}),1),reshape(tWidth{2},numel(tWidth{2}),1)];
+detPar.fWidth_conc = [reshape(fWidth{1},numel(fWidth{1}),1),reshape(fWidth{2},numel(fWidth{2}),1)];
 
