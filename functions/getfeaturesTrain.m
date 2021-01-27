@@ -40,8 +40,7 @@ for stimpair = 1:size(allERSP,1) % for each stimulation pair
 
         idx_ERSP = ERSPfilt<0;
 
-        
-        %%% plot ERSP (optionally)
+        % %%% plot ERSP (optionally)
         % plot_ERSP(subject.ERSP,stimpair,chan)
         % hold on
                 
@@ -49,9 +48,11 @@ for stimpair = 1:size(allERSP,1) % for each stimulation pair
         hys_div = NaN(2,size(ERSPfilt,1),size(ERSPfilt,2)/2);
         for win = 1:2 % pre and post stimulation
             hys_div(win,:,:) = idx_ERSP(:,time(win,:));
+
+            partfig = ERSPfilt(:,time(win,:));
             
             %%% Get area and other features
-            stats = regionprops(logical(squeeze(hys_div(win,:,:))),'Area','BoundingBox','FilledImage');
+            stats = regionprops(logical(squeeze(hys_div(win,:,:))),'Area','BoundingBox','FilledImage','PixelIdxList');
                                   
             %%% Get area and duration in a double           
             if ismember(chan,stimpchan(stimpair,:)) % fill with NaNs when in stimulus pair
@@ -76,8 +77,14 @@ for stimpair = 1:size(allERSP,1) % for each stimulation pair
                 fWidth{win}(stimpair,chan) = 0;
                 
             else
-                % find largest area
-                [~,sort_idx] = sort([stats.Area],'descend');
+                
+                % determine mean intensity of all pixels in FilledImage
+                for i=1:size(stats,1)
+                    stats(i).meanIntensity = mean(partfig(stats(i).PixelIdxList));
+                end
+                
+                % find largest area with largest mean intensity
+                [~,sort_idx] = sort([stats.Area].*abs([stats.meanIntensity]),'descend');
                 idx = sort_idx(1);
                 
                 Area{win}(stimpair,chan) = stats(idx).Area;
@@ -87,9 +94,9 @@ for stimpair = 1:size(allERSP,1) % for each stimulation pair
                 fWidth{win}(stimpair,chan) = stats(idx).BoundingBox(4);
             end
                         
-            %%% plot bounding box in ERSP plot (optionally)
+%             %%% plot bounding box in ERSP plot (optionally)
 %             if ~isnan(tStart{win}(stimpair,chan)) 
-                % plot bounding box on largest power suppression
+%                 %%% plot bounding box on largest power suppression
 %                 if tStart{win}(stimpair,chan) > 0.5
 %                     x1 = (times(floor(tStart{win}(stimpair,chan)+t(win)-1)) + times(ceil(tStart{win}(stimpair,chan)+t(win)-1)))/2;
 %                 else
