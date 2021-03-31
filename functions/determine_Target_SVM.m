@@ -1,6 +1,14 @@
 % this function uses the visual scores to make TargetValues (Y).
-% 1 = power suppression was scored
-% 0 = no power suppression was scored
+% 1 = power suppression was observed
+% 0 = no power suppression was observed
+
+% OUTPUT:
+% Y_alltrain = [ERSPs of all patients in train set x 1], filled with 0/1
+% Y_alltest = [ERSPs of all patients in train set x 1], filled with 0/1
+% Y_conc = {number of patients x 1}, each cell is filled with 0/1 
+%   concatenated for each individual patient [ERSPs x1 ]
+% Y = {number of patients x 1}, each cell is filled with 0/1 
+%   [stimulus pairs x channels]
 
 function [Y_alltrain,Y_alltest, Y_conc, Y] = determine_Target_SVM(dataBase,cfg)
 
