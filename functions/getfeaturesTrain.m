@@ -3,7 +3,7 @@
 % made BIDS compatible by Dorien van Blooijs
 % september 2019
 
-function detPar = getfeaturesTrain(subject)
+function [detPar,statsPost] = getfeaturesTrain(subject)
 
 % extract variables from subject
 allERSP = subject.ERSP.allERSPboot;
@@ -29,37 +29,40 @@ tStart = cell(2,1);
 fStart = cell(2,1);
 tWidth = cell(2,1);
 fWidth = cell(2,1);
+statsPost = cell(size(allERSP));
 
 for stimpair = 1:size(allERSP,1) % for each stimulation pair
     for chan = 1:size(allERSP,2) % for each recording electrode
-                
+        
         % delineate the power suppression in bootstrapped ERSP
         ERSP = allERSP{stimpair,chan};
         ERSPfilt = imgaussfilt(ERSP,0.5,'Filterdomain','spatial');
-
+        
         idx_ERSP = ERSPfilt<0;
-
+        
         % %%% plot ERSP (optionally)
         % plot_ERSP(subject.ERSP,stimpair,chan)
         % hold on
-                
+        
         % pre-allocation
         hys_div = NaN(2,size(ERSPfilt,1),size(ERSPfilt,2)/2);
         for win = 1:2 % pre and post stimulation
             hys_div(win,:,:) = idx_ERSP(:,time(win,:));
-
+            
             partfig = ERSPfilt(:,time(win,:));
             
             %%% Get area and other features
             stats = regionprops(logical(squeeze(hys_div(win,:,:))),'Area','BoundingBox','FilledImage','PixelIdxList');
-                                  
-            %%% Get area and duration in a double           
+            
+            %%% Get area and duration in a double
             if ismember(chan,stimpchan(stimpair,:)) % fill with NaNs when in stimulus pair
                 Area{win}(stimpair,chan) = NaN;
                 tStart{win}(stimpair,chan) = NaN;
                 fStart{win}(stimpair,chan) = NaN;
                 tWidth{win}(stimpair,chan) = NaN;
                 fWidth{win}(stimpair,chan) = NaN;
+                
+                statsPost{stimpair,chan} = NaN;
                 
             elseif idx_ch_bad(chan) == 1 % fill with NaNs when bad channel (noisy)
                 Area{win}(stimpair,chan) = NaN;
@@ -68,12 +71,16 @@ for stimpair = 1:size(allERSP,1) % for each stimulation pair
                 tWidth{win}(stimpair,chan) = NaN;
                 fWidth{win}(stimpair,chan) = NaN;
                 
+                statsPost{stimpair,chan} = NaN;
+                
             elseif isempty(stats)
                 Area{win}(stimpair,chan) = 0;
                 tStart{win}(stimpair,chan) = 0;
                 fStart{win}(stimpair,chan) = 0;
                 tWidth{win}(stimpair,chan) = 0;
                 fWidth{win}(stimpair,chan) = 0;
+                
+                statsPost{stimpair,chan} = NaN;
                 
             else
                 
@@ -91,33 +98,41 @@ for stimpair = 1:size(allERSP,1) % for each stimulation pair
                 fStart{win}(stimpair,chan) = stats(idx).BoundingBox(2);
                 tWidth{win}(stimpair,chan) = stats(idx).BoundingBox(3);
                 fWidth{win}(stimpair,chan) = stats(idx).BoundingBox(4);
+                statsPost{stimpair,chan} = vertcat(stats.BoundingBox);
+                
             end
-                        
-%             %%% plot bounding box in ERSP plot (optionally)
-%             if ~isnan(tStart{win}(stimpair,chan)) 
-%                 %%% plot bounding box on largest power suppression
-%                 if tStart{win}(stimpair,chan) > 0.5
-%                     x1 = (times(floor(tStart{win}(stimpair,chan)+t(win)-1)) + times(ceil(tStart{win}(stimpair,chan)+t(win)-1)))/2;
-%                 else
-%                     x1 = times(1)-0.5*pixelWidth;
-%                 end
-%                 
-%                 if fStart{win}(stimpair,chan) > 0.5
-%                     y1 = (freqs(floor(fStart{win}(stimpair,chan))) + freqs(ceil(fStart{win}(stimpair,chan))))/2;
-%                 else
-%                     y1 = freqs(1)-0.5*pixelHeigth;
-%                 end
-%                 w = tWidth{win}(stimpair,chan)*pixelWidth;
-%                 h = fWidth{win}(stimpair,chan)*pixelHeigth;
-%                 
-%                 rectangle('Position',[x1 y1 w h],'EdgeColor',C),
-%                 text(x1+0.5*w,y1+0.5*h,num2str(Area{win}(stimpair,chan)))
-%             end
-
+            
+            %%% plot bounding box in ERSP plot (optionally)
+            %             if ~isnan(tStart{win}(stimpair,chan))
+            %                 %%% plot bounding box on largest power suppression
+            %                 if tStart{win}(stimpair,chan) > 0.5
+            %                     x1 = (times(floor(tStart{win}(stimpair,chan)+t(win)-1)) + times(ceil(tStart{win}(stimpair,chan)+t(win)-1)))/2;
+            %                 else
+            %                     x1 = times(1)-0.5*pixelWidth;
+            %                 end
+            %
+            %                 if fStart{win}(stimpair,chan) > 0.5
+            %                     y1 = (freqs(floor(fStart{win}(stimpair,chan))) + freqs(ceil(fStart{win}(stimpair,chan))))/2;
+            %                 else
+            %                     y1 = freqs(1)-0.5*pixelHeigth;
+            %                 end
+            %                 w = tWidth{win}(stimpair,chan)*pixelWidth;
+            %                 h = fWidth{win}(stimpair,chan)*pixelHeigth;
+            %
+            %                 rectangle('Position',[x1 y1 w h],'EdgeColor',C),
+            %                 text(x1+0.5*w,y1+0.5*h,num2str(Area{win}(stimpair,chan)))
+            %             end
+            
         end
-%         hold off
-%         pause
+        %         hold off
+        %         pause
+        
+%         fprintf('--- Stimulus pair %s-%s, channel %s --- \n',...
+%             subject.ERSP.cc_stimchans{stimpair,:}, subject.ERSP.ch{chan})
     end
+    
+    fprintf('--- Stimulus pair %s-%s --- \n',...
+        subject.ERSP.cc_stimchans{stimpair,:})
 end
 
 % concatenate into two vectors [channels*stimuli x 2] (pre- and post-stimulus)
