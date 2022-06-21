@@ -1,6 +1,6 @@
-function dataBase = visualRating_ccep(dataBase,subj,cfg,endstimp)
+function dataBase = visualRating_ccep(myDataPath,dataBase,subj,cfg,endstimp)
 
-filefolder = fullfile(cfg.ERpath,dataBase(subj).sub_label,dataBase(subj).ses_label);
+filefolder = fullfile(myDataPath.CCEPpath,dataBase(subj).sub_label,dataBase(subj).ses_label);
 if ~exist(filefolder,'dir')
     mkdir(filefolder)
 end

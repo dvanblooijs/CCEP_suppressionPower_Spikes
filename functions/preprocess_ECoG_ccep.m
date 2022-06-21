@@ -100,7 +100,7 @@ for subj = 1:size(dataBase,2)
         end
     end
     
-    cc_epoch_sorted_avg = squeeze(nanmean(cc_epoch_sorted,2));
+    cc_epoch_sorted_avg = squeeze(mean(cc_epoch_sorted,2,'omitnan'));
     
     dataBase(subj).cc_epoch_sorted = cc_epoch_sorted;
     dataBase(subj).tt_epoch_sorted = tt_epoch_sorted;

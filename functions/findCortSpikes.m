@@ -17,27 +17,27 @@ for chan = 1:size(Mvalues,1)
         firstsampgroups = [locs(1) locs(find(diff(locs)>dif)+1)];
         
         sampnums = cell(1,size(lastsampgroups,2)); uV_sampnums = cell(1,size(lastsampgroups,2));
-        sampnum_maxuV = NaN(1,size(lastsampgroups,2)); maxuV = NaN(1,size(lastsampgroups,2));
+        sampnum_minuV = NaN(1,size(lastsampgroups,2)); minuV = NaN(1,size(lastsampgroups,2));
         for i=1:size(lastsampgroups,2)
             % samplenummers met Mrange
             sampnums{1,i} = firstsampgroups(i):lastsampgroups(i);
             % uV values bij samplenummers
             uV_sampnums{1,i} = data_stimfree(chan,firstsampgroups(i):lastsampgroups(i));
-            % location with max uV value
-            sampnum_maxuV(1,i) = sampnums{1,i}(find(uV_sampnums{1,i} == max(uV_sampnums{1,i}),1,'first'));
-            % max uV value
-            maxuV(1,i) = max(uV_sampnums{1,i});
+            % location with min uV value (spikes are negative peaks)
+            sampnum_minuV(1,i) = sampnums{1,i}(find(uV_sampnums{1,i} == min(uV_sampnums{1,i}),1,'first'));
+            % min uV value
+            minuV(1,i) = max(uV_sampnums{1,i});
             
             % remove all saturated results (these are mainly stimulation effect)
             % and spikes with an amplitude < 0 uV
-            if maxuV(1,i) >2900
-                sampnum_maxuV(1,i) = NaN;
-                maxuV(1,i)  = NaN;
+            if minuV(1,i) < -2900
+                sampnum_minuV(1,i) = NaN;
+                minuV(1,i)  = NaN;
             end
         end
         
     end
-    detIED{chan} = sampnum_maxuV;
+    detIED{chan} = sampnum_minuV;
 end
 
 

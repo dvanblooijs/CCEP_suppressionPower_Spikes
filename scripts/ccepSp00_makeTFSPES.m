@@ -8,10 +8,24 @@ myDataPath = setLocalDataPath(1);
 
 %% patient settings
 
-cfg.sub_labels = {['sub-' input('Patient number (RESPXXXX): ','s')]};
-cfg.ses_label = input('Session number (ses-X): ','s');
+subFolders = dir(myDataPath.dataPath);
+idx_subjects = contains({subFolders(:).name},'sub-');
+subjects = {subFolders(idx_subjects).name};
+string = [repmat('%s, ',1,size(subjects,2)-1),'%s'];
+
+cfg.sub_labels = {input(sprintf(['Select one of these files [',string,']: \n'],subjects{:}),'s')};
+
+sesFiles = dir(fullfile(myDataPath.dataPath,cfg.sub_labels{:}));
+idx_ses = contains({sesFiles(:).name},'ses-');
+cfg.ses_label = sesFiles(idx_ses).name;
+
 cfg.task_label = 'task-SPESclin';
-cfg.run_label = {['run-' input('Run [daydayhhminmin]: ','s')]};
+
+runFiles = dir(fullfile(myDataPath.dataPath,cfg.sub_labels{:}, ...
+    cfg.ses_label,'ieeg'));
+idx_run = contains({runFiles(:).name},'.eeg');
+temp_run_label = extractBetween(runFiles(idx_run).name,'run-','_ieeg');
+cfg.run_label = {['run-' temp_run_label{1}]};
 
 %% load ECoGs with SPES from X patients
 
@@ -58,7 +72,7 @@ for subj=1:size(dataBase,2)
         dataBase(subj).cc_epoch_sorted_reref = dataBase(subj).cc_epoch_sorted;        
     end
     
-    dataBase(subj).cc_epoch_sorted_avg = squeeze(nanmean(dataBase(subj).cc_epoch_sorted_reref,2));
+    dataBase(subj).cc_epoch_sorted_avg = squeeze(mean(dataBase(subj).cc_epoch_sorted_reref,2,'omitnan'));
 end
 
 %% make TF-SPES Event-Related - Stimulus - Perturbations

@@ -1,9 +1,11 @@
 %% settings for constructing SVM
+
 clc
 clear
 myDataPath = setLocalDataPath(1);
 
-%%
+%% patient settings
+% these data is not used in the analysis of power suppression of article
 
 % old database: PAT119,  PAT126, PAT130, PAT135
 cfg.sub_labels = { 'sub-RESP0607', 'sub-RESP0638','sub-RESP0676','sub-RESP0690'};
@@ -23,7 +25,7 @@ for subj = 1:size(cfg.sub_labels,2)
     dataBase(subj).task_label = cfg.task_label;
     dataBase(subj).run_label = cfg.run_label{subj};
     
-    dataBase(subj).ERSP = load(fullfile(myDataPath.TFSPESoutput, dataBase(subj).sub_label,...
+    dataBase(subj).ERSP = load(fullfile(myDataPath.ERSPoutput, dataBase(subj).sub_label,...
         dataBase(subj).ses_label,dataBase(subj).run_label,...
         [dataBase(subj).sub_label, '_',dataBase(subj).ses_label,'_' dataBase(subj).task_label,...
         '_', dataBase(subj).run_label,'_ERSP.mat']));
@@ -43,7 +45,8 @@ for stimp = 1:size(dataBase(subj).ERSP.allERSPboot,1)
     for chan = 1:size(dataBase(subj).ERSP.allERSPboot,2)
         
         if ~ismember(chan,dataBase(subj).ERSP.cc_stimsets(stimp,:))
-            plot_ERSP(dataBase(subj).ERSP,stimp,chan)
+            fig = 1;
+            plot_ERSP(dataBase(subj).ERSP,stimp,chan,fig)
             
             perc = n / size(dataBase(subj).ERSP.allERSPboot(:),1) *100;
             

@@ -4,24 +4,45 @@
 
 clc
 clear
-cfg = setLocalDataPath(1);
+myDataPath = setLocalDataPath(1);
 
 %% patient settings
-% old database: PAT54, PAT78, PAT88, PAT97, PAT99, PAT114, PAT115, PAT120, PAT123, PAT137
-cfg.sub_labels = { 'sub-RESP0401', 'sub-RESP0435', 'sub-RESP0458', 'sub-RESP0478', 'sub-RESP0502',...
-    'sub-RESP0574', 'sub-RESP0589', 'sub-RESP0608', 'sub-RESP0621', 'sub-RESP0699'};
-cfg.ses_label = 'ses-1';
-cfg.task_label = 'task-SPESclin';
-cfg.run_label = {'run-031153','run-051138','run-011714','run-021549','run-031740'...
-    'run-021358','run-021050','run-021057','run-021147','run-031717'};
+
+files = dir(myDataPath.dataPath);
+idx_subj = contains({files(:).name},'sub-');
+files_subj = files(idx_subj);
+cfg = struct([]);
+
+for subj = 1:size(files_subj,1)
+
+    cfg(subj).sub_labels = files_subj(subj).name;
+
+    files = dir(fullfile(files_subj(subj).folder,files_subj(subj).name));
+    idx_ses = contains({files(:).name},'ses-');
+    files_ses = files(idx_ses);
+
+    cfg(subj).ses_label = files_ses(1).name;
+
+    cfg(subj).task_label = 'task-SPESclin';
+
+    files = dir(fullfile(files_ses(1).folder,files_ses(1).name,'ieeg'));
+    idx_eeg = contains({files(:).name},'.eeg');
+    files_eeg = files(idx_eeg);
+
+    for run = 1:size(files_eeg,1)
+        runTemp = extractBetween(files_eeg(run).name,'run-','_ieeg');
+        cfg(subj).run_label{run} = ['run-', runTemp{1}];
+    end
+end
 
 %% load ECoGs with SPES from 10 patients
 
-dataBase = load_ECoGdata(cfg);
+dataBase = load_ECoGdata(myDataPath,cfg);
 
 disp('All ECoGs are loaded')
 
 %% preprocessing CCEP in ECoG
+cfg = [];
 
 % sort stimulation pairs
 cfg.dir = 'no'; % if you want to take negative/positive stimulation into account
@@ -38,11 +59,11 @@ dataBase = preprocess_ECoG_ccep(dataBase,cfg);
 
 disp('All ECoGs are preprocessed')
 
-%% detect ERs
+%% detect CCEPs
 
 dataBase = detect_n1peak_ECoG_ccep(dataBase, cfg);
 
-disp('All ERs are detected')
+disp('All CCEPs are detected')
 
 %% visually check detected ccep
 close all
@@ -54,9 +75,9 @@ substring = input(sprintf(['Choose subject: ',string,'\n'],subs{:}),'s');
 subj = find(contains({dataBase(:).sub_label},substring));
     
 % load checked N1s if visual rating has started earlier
-if exist(fullfile(cfg.ERpath, dataBase(subj).sub_label,dataBase(subj).ses_label,...
+if exist(fullfile(myDataPath.CCEPpath, dataBase(subj).sub_label,dataBase(subj).ses_label,...
         [dataBase(subj).sub_label, '_', dataBase(subj).ses_label,'_',dataBase(subj).task_label,'_',dataBase(subj).run_label,'_N1sChecked.mat']),'file')
-   dataBase(subj).ccep = load(fullfile(cfg.ERpath, dataBase(subj).sub_label,dataBase(subj).ses_label,...
+   dataBase(subj).ccep = load(fullfile(myDataPath.CCEPpath, dataBase(subj).sub_label,dataBase(subj).ses_label,...
         [dataBase(subj).sub_label, '_', dataBase(subj).ses_label,'_',dataBase(subj).task_label,'_',dataBase(subj).run_label,'_N1sChecked.mat']));   
 end
 
@@ -67,12 +88,12 @@ else
     endstimp = 0;
 end
 
-dataBase = visualRating_ccep(dataBase,subj,cfg,endstimp);
+dataBase = visualRating_ccep(myDataPath,dataBase,subj,cfg,endstimp);
     
 %% save ccep
 
 for subj = 1:size(dataBase,2)
-    targetFolder = fullfile(cfg.ERpath, dataBase(subj).sub_label,dataBase(subj).ses_label);
+    targetFolder = fullfile(myDataPath.CCEPpath, dataBase(subj).sub_label,dataBase(subj).ses_label);
     
     % Create the folder if it doesn't exist already.
     if ~exist(targetFolder, 'dir')
@@ -85,9 +106,11 @@ for subj = 1:size(dataBase,2)
     fileName = [dataBase(subj).dataName(start_filename(end)+1:stop_filename-1),'_N1sChecked.mat'];
     
     ccep = dataBase(subj).ccep;
-    ccep.dataName = dataBase(subj).dataName;
+    [~,eegFile,eegExt] = fileparts(dataBase(subj).dataName);
+    ccep.dataName = [eegFile, eegExt];
     ccep.ch = dataBase(subj).ch;
     ccep.cc_stimchans = dataBase(subj).cc_stimchans;
+    ccep.cc_stimsets = dataBase(subj).cc_stimsets;
     
     % detection parameters must be described when known!!
     ccep.detpar.amplitude_thresh = cfg.amplitude_thresh;

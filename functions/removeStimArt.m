@@ -9,7 +9,8 @@ for subj = 1:size(dataBase,2)
      
     % after stimulation, the signal is returning from saturated to
     % baseline. With subtracting a smooth signal, the slow trend is
-    % removed.
+    % removed, which is visible in the signal in the stimulation trial
+    % after stimulating this specific electrode.
     data_smooth = NaN(size(data_raw));
     for ch=1:size(data_raw,1)
         data_smooth(ch,:) = smooth(data_raw(ch,:),fs,'moving');

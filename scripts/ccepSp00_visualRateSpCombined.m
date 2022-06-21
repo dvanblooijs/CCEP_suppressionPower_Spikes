@@ -61,7 +61,8 @@ for stimp = 1:size(dataBase(subj).ERSP.allERSPboot,1)
     for chan = 1:size(dataBase(subj).ERSP.allERSPboot,2)
         
         if dataBase(subj).visBB1.vis_BB(stimp,chan) ~= dataBase(subj).visBB2.vis_BB(stimp,chan)
-            plot_ERSP(dataBase(subj).ERSP,stimp,chan)
+            fig = 1;
+            plot_ERSP(dataBase(subj).ERSP,stimp,chan,fig)
             
             perc = n / size(dataBase(subj).ERSP.allERSPboot(:),1) *100;
             

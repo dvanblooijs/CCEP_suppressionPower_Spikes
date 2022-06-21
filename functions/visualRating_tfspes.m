@@ -1,7 +1,7 @@
 function dataBase = visualRating_tfspes(dataBase,subj,lookPic, myDataPath,endstimp)
 %%
 if ~isempty(myDataPath)
-    filefolder = fullfile(myDataPath.dir_visrate,dataBase(subj).sub_label,dataBase(subj).ses_label,dataBase(subj).run_label);
+    filefolder = fullfile(myDataPath.ERSPoutput,dataBase(subj).sub_label,dataBase(subj).ses_label,dataBase(subj).run_label);
     if ~exist(filefolder,'dir')
         mkdir(filefolder)
     end
@@ -18,6 +18,13 @@ freqs = dataBase(subj).ERSP.freqs;
 t(1) = find(times<0,1,'first');
 t(2) = find(times>0,1,'first');
 
+ERSPdet = dataBase(subj).ERSPdet;
+
+% ERSPdet.cc_stimchans = dataBase(subj).ERSP.cc_stimchans;
+% ERSPdet.cc_stimsets = dataBase(subj).ERSP.cc_stimsets;
+% ERSPdet.ch = dataBase(subj).ERSP.ch;
+
+
 % if no ERSPs are checked
 if sum(strcmp(fieldnames(dataBase(subj)),'ERSPdet'))==0
     ERSPdet.checked = zeros(size(dataBase(subj).ERSP.allERSPboot));
@@ -25,7 +32,7 @@ elseif sum(strcmp(fieldnames(dataBase(subj).ERSPdet),'checked')) == 0
     ERSPdet.checked = zeros(size(dataBase(subj).ERSP.allERSPboot));
 end
 
-n=numel(ERSPdet.checked(:,1:endstimp))+1;
+n=numel(ERSPdet.detected(1:endstimp,:))+1;
 
 for stimp = endstimp+1:size(dataBase(subj).ERSP.allERSPboot,1)
     for chan = 1:size(dataBase(subj).ERSP.allERSPboot,2)
@@ -49,7 +56,7 @@ for stimp = endstimp+1:size(dataBase(subj).ERSP.allERSPboot,1)
                         if dataBase(subj).ERSPdet.tStart{win}(stimp,chan) > 0.5
                             x1 = (times(floor(dataBase(subj).ERSPdet.tStart{win}(stimp,chan)+t(win)-1)) + times(ceil(dataBase(subj).ERSPdet.tStart{win}(stimp,chan)+t(win)-1)))/2;
                         else
-                            x1 = times(1)-0.5*pixelWidth;
+                            x1 = times(t(win))-0.5*pixelWidth;
                         end
                         
                         if dataBase(subj).ERSPdet.fStart{win}(stimp,chan) > 0.5
@@ -68,7 +75,7 @@ for stimp = endstimp+1:size(dataBase(subj).ERSP.allERSPboot,1)
             
             perc = n / size(dataBase(subj).ERSP.allERSPboot(:),1) *100;
             
-            s = input(sprintf('%2.1f %% %s --- stimpair = %s-%s chan = %s --- Is this an ERSP? [y/n]: ',...
+            s = input(sprintf('%2.1f %% %s --- stimpair = %s-%s chan = %s --- Do you observe power suppression (y/n) and correct detection (y/yn)? [y/yn/n]: ',...
                 perc,dataBase(subj).sub_label, dataBase(subj).ERSP.cc_stimchans{stimp,:},dataBase(subj).ERSP.ch{chan}),'s');
             
             if strcmp(s,'yn') || strcmp(s,'cyn')
@@ -112,18 +119,22 @@ for stimp = endstimp+1:size(dataBase(subj).ERSP.allERSPboot,1)
                         end
                         
                         cp = get(gca,'CurrentPoint');
-                        alreadyClicked = 1;
                         
                         idx = find(x1 < cp(1,1) & x1+wdth > cp(1,1) &...
                             y1 < cp(1,2) & y1+h > cp(1,2));
                         
-                        axes1.Children(end-(figchild+idx)).EdgeColor = [0.3 0.3 0.3];
-                        
-                        fprintf('You selected: tStart = %3.1fs, fStart = %3.1fHz, tWidth = %3.1fs, fWidth = %3.1fHz \n',...
-                            x1(idx), y1(idx), wdth(idx), h(idx))
-                        
-                        fprintf('Press "c" when correct \n')
-                        
+                        if all(idx == 0)
+                            fprintf('No region is selected, try again! \n')
+                            alreadyClicked = 0;
+                        else
+                            axes1.Children(end-(figchild+idx)).EdgeColor = [0.3 0.3 0.3];
+                            alreadyClicked = 1;
+                            
+                            fprintf('You selected: tStart = %3.1fs, fStart = %3.1fHz, tWidth = %3.1fs, fWidth = %3.1fHz \n',...
+                                x1(idx), y1(idx), wdth(idx), h(idx))
+                            
+                            fprintf('Press "c" when correct \n')
+                        end
                     elseif w == 1
                         currkey = get(gcf,'CurrentCharacter');
                     end
@@ -131,7 +142,7 @@ for stimp = endstimp+1:size(dataBase(subj).ERSP.allERSPboot,1)
                 
                 ERSPdet.checked(stimp,chan) = 1;
                 
-                fprintf('Selection was: tStart = %3.1fs, fStart = %3.1fHz, tWidth = %3.1fs, fWidth = %3.1fHz \n',...
+                fprintf('Selection was: tStart = %3.1fsamples, fStart = %3.1fsamples, tWidth = %3.1fsamples, fWidth = %3.1fsamples \n',...
                     dataBase(subj).ERSPdet.tStart{2}(stimp,chan), ...
                     dataBase(subj).ERSPdet.fStart{2}(stimp,chan), ...
                     dataBase(subj).ERSPdet.tWidth{2}(stimp,chan),...
@@ -144,12 +155,12 @@ for stimp = endstimp+1:size(dataBase(subj).ERSP.allERSPboot,1)
                 dataBase(subj).ERSPdet.tWidth{2}(stimp,chan) = tWidth(idx);
                 dataBase(subj).ERSPdet.fWidth{2}(stimp,chan) = fWidth(idx);
                 
-                fprintf('Selection is now saved as: tStart = %3.1fs, fStart = %3.1fHz, tWidth = %3.1fs, fWidth = %3.1fHz \n \n',...
+                fprintf('Selection is now saved as: tStart = %3.1fsamples, fStart = %3.1fsamples, tWidth = %3.1fsamples, fWidth = %3.1fsamples \n \n',...
                     dataBase(subj).ERSPdet.tStart{2}(stimp,chan), ...
                     dataBase(subj).ERSPdet.fStart{2}(stimp,chan), ...
                     dataBase(subj).ERSPdet.tWidth{2}(stimp,chan),...
                     dataBase(subj).ERSPdet.fWidth{2}(stimp,chan))
-
+                
             elseif strcmp(s,'y') || strcmp(s,'cy')
                 ERSPdet.checked(stimp,chan) = 1;
                 
@@ -165,16 +176,25 @@ for stimp = endstimp+1:size(dataBase(subj).ERSP.allERSPboot,1)
     
     % save also till which stimpair visual ERSPS were checked.
     ERSPdet.checkUntilStimp = stimp;
-
+    
     if save_check == 1
-        filename = [dataBase(subj).sub_label,'_',dataBase(subj).ses_label,'_',dataBase(subj).task_label,'_',dataBase(subj).run_label,'_ERSPsChecked.mat'];
+        filename = [dataBase(subj).sub_label,'_',dataBase(subj).ses_label,'_',dataBase(subj).task_label,'_',dataBase(subj).run_label,'_ERSPdet.mat'];
         
         % save file during scoring in case of error
         save(fullfile(filefolder,filename),'-struct','ERSPdet');
     end
 end
 
+%%
+if save_check == 1
+    filename = [dataBase(subj).sub_label,'_',dataBase(subj).ses_label,'_',dataBase(subj).task_label,'_',dataBase(subj).run_label,'_ERSPdet.mat'];
+
+    % save file after scoring for completeness
+    save(fullfile(filefolder,filename),'-struct','ERSPdet');
+end
+
 dataBase(subj).ERSPdet.checked = ERSPdet.checked;
+dataBase(subj).ERSPdet.checkUntilStimp = ERSPdet.checkUntilStimp;
 
 disp('Visual rating in completed')
 
