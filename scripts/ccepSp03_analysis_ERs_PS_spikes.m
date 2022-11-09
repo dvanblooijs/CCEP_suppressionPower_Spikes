@@ -37,6 +37,9 @@ for subj = 1:size(files_subj,1)
     end
 end
 
+% housekeeping
+clear files files_eeg files_ses files_subj idx_eeg idx_ses idx_subj run runTemp subj
+
 %% load ECoGs with SPES from X patients
 
 dataBase = load_ECoGdata(myDataPath,cfg);
@@ -81,6 +84,7 @@ end
 
 disp('CCEPs are loaded')
 
+% housekeeping
 clear idx_ERSPfile idx_ccepfile file files idx_ses idx_sub ses subj ans
 
 %% load ERSP
@@ -107,6 +111,7 @@ end
 
 disp('ERSPs are loaded')
 
+% housekeeping
 clear idx_ERSPfile idx_ccepfile file files idx_ses idx_sub ses subj ans run idx_run
 
 %% load spikes
@@ -271,10 +276,14 @@ end
 
 clear ERSPmat CCEPmat ERSPmat_comb CCEPmat_comb stimp exclude_ccep exclude_ersp I idx stim_size subj cc_stimchans cc_stimsets tt_epoch_sorted
 
-%% find spikes in each stimulus pair
+%% find spikes in a specific time window for each response electrode 
+% after stimulating each stimulus pair
+% and calculate the spikesratio
 
-selDur = 1.1; % seconds pre and post stimulation to find spikes
-t = -cfg.epoch_prestim+1/2048:1/2048 : (cfg.epoch_length - cfg.epoch_prestim);
+% define period in which spikes are found for spikesratio
+selDur = 1; % seconds pre and post stimulation to find spikes
+fs = dataBase(1).ccep_header.Fs;
+t = -cfg.epoch_prestim+1/fs:1/fs : (cfg.epoch_length - cfg.epoch_prestim);
 
 for subj = 1:size(dataBase,2)
 
@@ -286,43 +295,40 @@ for subj = 1:size(dataBase,2)
         spikespre = cell(size(dataBase(subj).cc_stimchans,1),size(dataBase(subj).IEDs.IEDch,2)); % [stimpairs x IED channels]
         spikespost = cell(size(dataBase(subj).cc_stimchans,1),size(dataBase(subj).IEDs.IEDch,2)); % [stimpairs x IED channels]
         spikesratio = NaN(size(dataBase(subj).cc_stimchans,1),size(dataBase(subj).IEDs.IEDch,2)); % [stimpairs x IED channels]
-        p_spikes = NaN(size(dataBase(subj).cc_stimchans,1),size(dataBase(subj).IEDs.IEDch,2)); % [stimpairs x IED channels]
+%         p_spikes = NaN(size(dataBase(subj).cc_stimchans,1),size(dataBase(subj).IEDs.IEDch,2)); % [stimpairs x IED channels]
 
         for stim = 1:size(dataBase(subj).tt_epoch_sorted,2) % for each stim pair
             for ch = 1:size(dataBase(subj).IEDs.IEDch,1)
-
+            
+                % if channel is not stimulated in this specific stim trial
                 if strcmpi(dataBase(subj).cc_stimchans{stim,1},dataBase(subj).IEDs.IEDchan{ch}) || ...
                         strcmpi(dataBase(subj).cc_stimchans{stim,2},dataBase(subj).IEDs.IEDchan{ch})
 
                     % when channel with IEDs is stimulated, the spike ratio
                     % should be NaN
-                    spikespre{stim,ch}(n) = NaN;
-                    spikespost{stim,ch}(n) = NaN;
+                    spikespre{stim,ch}(1:size(dataBase(subj).cc_epoch_sorted,2)) = NaN;
+                    spikespost{stim,ch}(1:size(dataBase(subj).cc_epoch_sorted,2)) = NaN;
                     spikesratio(stim,ch) = NaN;
-                    p_spikes(stim,ch) = NaN;
+%                     p_spikes(stim,ch) = NaN;
 
                 else
                     for n = 1:size(dataBase(subj).cc_epoch_sorted,2) % for each trial in each stim pair (so usually 10)
 
-                        % start and end of epoch for each stimulus pair
+                        % time window in samples of epoch (usually 4s: 2s pre-stim, 2s post-stim)
                         total_epoch = squeeze(dataBase(subj).tt_epoch_sorted(n,stim,:));
 
                         % 200 ms around stimulus artefact should be not included in
-                        % spike counts
-                        samp_stim = round((cfg.epoch_prestim-0.1) * 2048) : round((cfg.epoch_prestim+0.1) * 2048);
-                        total_epoch(samp_stim) = NaN; % which is the complete duration of the period that is used for analysis (usually 4s: 2s pre-stim, 2s post-stim)
+                        % spike counts due to stimulus artefact (100 ms pre
+                        % and 100 ms post stimulus)
+                        samp_stim = round((cfg.epoch_prestim-0.1) * fs) : round((cfg.epoch_prestim+0.1) * fs);
+                        total_epoch(samp_stim) = NaN; 
 
-                        % selected epoch
-                        samp_sel = round((cfg.epoch_prestim-selDur) * 2048) : round((cfg.epoch_prestim+selDur) * 2048);
-                        selEpoch = total_epoch;
-                        selEpoch(setdiff(1:size(total_epoch,1),samp_sel)) = NaN;
-
-                        % find all detected spikes in this epoch of
-                        % cfg.epoch_length
+                        % find all detected spikes in this epoch (excluding
+                        % those in window around stimulus artefact)
                         spikessamp = intersect(total_epoch,dataBase(subj).IEDs.spikesdet{ch});
 
-                        % find sample number and calculate spikes prior and post stim
-                        epochsamp = NaN(size(spikessamp)); removeCel = [];
+                        % find sample number and calculate spikes pre and post stim
+                        epochsamp = NaN(size(spikessamp)); removeSpike = [];
                         preCount = 0; postCount = 0;
                         for num = 1:size(spikessamp,1)
                             epochsamp(num) = find(total_epoch == spikessamp(num));
@@ -332,12 +338,21 @@ for subj = 1:size(dataBase,2)
                             elseif t(epochsamp(num)) > 0  && t(epochsamp(num)) < selDur
                                 postCount = postCount+1;
                             else
-                                removeCel = [removeCel, num]; %#ok<AGROW>
+                                % remove spike if it is not in the selected
+                                % epoch (selDur around stimulus, excluding 
+                                % the window around the stimulus artefact)
+                                removeSpike = [removeSpike, num]; %#ok<AGROW>
                             end
                         end
 
                         selEpochsamp = epochsamp;
-                        selEpochsamp(removeCel) = [];
+                        selEpochsamp(removeSpike) = [];
+
+                        spikespre{stim,ch}(n) = preCount;
+                        spikespost{stim,ch}(n) = postCount;
+
+                        totEpochspikessamp{stim,ch,n} = epochsamp;
+                        selEpochspikessamp{stim,ch,n} = selEpochsamp;
 
                         %                     figure(1),
                         %                     plot(total_epoch,ones(size(total_epoch))),
@@ -354,734 +369,51 @@ for subj = 1:size(dataBase,2)
 
                         %pause
 
-                        spikespre{stim,ch}(n) = preCount;
-                        spikespost{stim,ch}(n) = postCount;
-
-                        totEpochspikessamp{stim,ch,n} = epochsamp;
-                        selEpochspikessamp{stim,ch,n} = selEpochsamp;
-
                     end
 
+                    % if no spikes are found pre or post stim, one of the
+                    % values == 0, which leads to Infinite values when
+                    % determining the logarithmic value and difficulties in
+                    % visualisation. So the 0-value is changed to 0.1.
+                    if sum(spikespost{stim,ch}) == 0 && sum(spikespre{stim,ch}) ~= 0
 
-                    spikesratio(stim,ch) = sum(spikespost{stim,ch})/sum(spikespre{stim,ch});
-                    p = signtest(spikespre{stim,ch},spikespost{stim,ch});
-                    p_spikes(stim,ch) = p;
+                        spikesratio(stim,ch) = 0.1/sum(spikespre{stim,ch});
+
+                    elseif sum(spikespost{stim,ch}) ~= 0 && sum(spikespre{stim,ch}) == 0
+
+                        spikesratio(stim,ch) = sum(spikespost{stim,ch})/0.1;
+
+                    elseif sum(spikespost{stim,ch}) == 0 && sum(spikespre{stim,ch}) == 0
+
+                        spikesratio(stim,ch) = 0.1/0.1;
+
+                    else
+                        spikesratio(stim,ch) = sum(spikespost{stim,ch})/sum(spikespre{stim,ch});
+%                     p_temp = signtest(spikespre{stim,ch},spikespost{stim,ch});
+%                     p_spikes(stim,ch) = p_temp;
+                    end
                 end
             end
         end
 
-        dataBase(subj).IEDs.totEpochspikessamp  = totEpochspikessamp;
-        dataBase(subj).IEDs.selEpochspikessamp  = selEpochspikessamp;
-        dataBase(subj).IEDs.spikespre   = spikespre;
-        dataBase(subj).IEDs.spikespost  = spikespost;
-        dataBase(subj).IEDs.spikesratio = spikesratio;
-        dataBase(subj).IEDs.spikes_p    = p_spikes;
+        dataBase(subj).IEDs.totEpochspikessamp  = totEpochspikessamp; % complete time window (usually 4s: 2s pre and 2 s post-stim, excluding the window around the stimulus artefact)
+        dataBase(subj).IEDs.selEpochspikessamp  = selEpochspikessamp; % in the selected period (selDur around stimulus, excluding the window of the stimulus artefact)
+        dataBase(subj).IEDs.spikespre   = spikespre; % in the selected period (selDur around stimulus, excluding the window of the stimulus artefact)
+        dataBase(subj).IEDs.spikespost  = spikespost; % in the selected period (selDur around stimulus, excluding the window of the stimulus artefact)
+        dataBase(subj).IEDs.spikesratio = spikesratio; % in the selected period (selDur around stimulus, excluding the window of the stimulus artefact)
+%         dataBase(subj).IEDs.spikes_p    = p_spikes;
 
     else
-        dataBase(subj).IEDtest = 0;
+        % do nothing, because no spikes are annotated in this subject
     end
 end
 
-clear subj ch i samp_stim spikessamp startepoch stim stopepoch time_stim total_epoch
-
-%% make figure with spikes per channel in all stimulus pairs
-% close all
-%
-% for subj = 1%:size(dataBase,2)
-%
-%     if ~isempty(dataBase(subj).IEDs)
-%         spikessamp = dataBase(subj).IEDs.spikessamp;
-%         spikes_p = dataBase(subj).IEDs.spikes_p;
-%
-%         %         ccep_stimchans = vertcat(dataBase(subj).ccep.cceps(:).stimchans);
-%
-%         time_stim = cfg.epoch_prestim :5:50;
-%         time_stimpre = time_stim - dur;
-%         time_stimpost = time_stim + dur;
-%
-%         stimlabels = cell(size(dataBase(subj).cc_stimchans,1),1);
-%         for i=1:size(dataBase(subj).cc_stimchans,1)
-%             stimlabels{i} = sprintf('%s-%s',dataBase(subj).cc_stimchans{i,1},dataBase(subj).cc_stimchans{i,2});
-%         end
-%
-%         ymin = 0;
-%         ymax = size(spikessamp,1)+1;
-%
-%         for ch = 1:size(dataBase(subj).IEDs.IEDch,2)
-%             h=figure;
-%
-%             % plot moment of stimulation
-%             plot(time_stim.*ones(ymax+1,1),ymin:ymax,'k')
-%
-%             hold on
-%             plot(time_stimpre.*ones(ymax+1,1),ymin:ymax,':k')
-%             plot(time_stimpost.*ones(ymax+1,1),ymin:ymax,':k')
-%
-%             for stim = 1:size(spikessamp,1)
-%                 % if channel is not part of stimulus pair
-%                 if ~strcmpi(dataBase(subj).cc_stimchans{stim,1},dataBase(subj).IEDs.IEDchan{ch}) &&...
-%                         ~strcmpi(dataBase(subj).cc_stimchans{stim,2},dataBase(subj).IEDs.IEDchan{ch})
-%
-%
-%                     %                     ccepstimnum = dataBase(subj).cc_stimsets(stim,1) == ccep_stimchans(:,1) &...
-%                     %                         dataBase(subj).cc_stimsets(stim,2) == ccep_stimchans(:,2);
-%                     %
-%                     % if there is a connection
-%                     %                     if ismember(dataBase(subj).IEDs.IEDch(ch),dataBase(subj).ccep.cceps(ccepstimnum).ccepsvis)
-%                     %                         plot(spikessamp{stim,ch}/2048,stim*ones(size(spikessamp{stim,ch})),'.','Color',[0.2 0.2 0.2]) % darker gray
-%                     %                     else
-%                     %                         plot(spikessamp{stim,ch}/2048,stim*ones(size(spikessamp{stim,ch})),'.','Color',[0.8 0.8 0.8]) % lighter gray
-%                     %                     end
-%                     %                     % if there is a significant modulation
-%                     if spikes_p(stim,ch) <0.05
-%                         plot(spikessamp{stim,ch}/2048,stim*ones(size(spikessamp{stim,ch})),'.','Color',[0.2 0.2 0.2]) % darker gray
-%                     else
-%                         plot(spikessamp{stim,ch}/2048,stim*ones(size(spikessamp{stim,ch})),'.','Color',[0.8 0.8 0.8]) % lighter gray
-%                     end
-%                 end
-%             end
-%
-%             hold off
-%             h.Units = 'normalized';
-%             h.Position = [0.14 0.07 0.6 0.8];
-%             ax = gca;
-%             ax.YTick = ymin:ymax;
-%             ax.YTickLabel = [{' '},stimlabels(:)',{' '}];
-%             ylim([ymin ymax])
-%             xlim([0 50])
-%             title(sprintf('Detected spikes per stimulus pair in %s, %s, channel %s',dataBase(subj).sub_label,dataBase(subj).run_label,dataBase(subj).IEDs.IEDchan{ch}))
-%         end
-%     end
-% end
-%
-% clear ax ccep_stimchans ccepstimnum ch h i spikessamp stim stimlabels subj time_stim ymax ymin
-
-
-
-
-
-
-%% OLD
-%% spikes vs cceps, based on whether p<0.05 was found with sign-test pre- and post stimulation
-
-for subj = 1:size(dataBase,2)
-    if ~isempty(dataBase(subj).IEDs)
-        spikes = zeros(size(dataBase(subj).IEDs.spikes_p));
-
-        spikes(dataBase(subj).IEDs.spikes_p<0.05) = 1;
-        CCEPmat = dataBase(subj).CCEPmat(:,dataBase(subj).IEDs.IEDch);
-
-        [tbl] = crosstab(CCEPmat(:),spikes(:));
-
-        if size(tbl,1) == 2 && size(tbl,2) == 2
-
-            [~,p,stats] = fishertest(tbl);
-        else
-            p = NaN;
-            stats.OddsRatio = NaN;
-            stats.ConfidenceInterval = [-Inf Inf];
-        end
-
-        dataBase(subj).stat_ccep_spikes.OR = stats.OddsRatio;
-        dataBase(subj).stat_ccep_spikes.CI = stats.ConfidenceInterval;
-        dataBase(subj).stat_ccep_spikes.tbl = tbl;
-        dataBase(subj).stat_ccep_spikes.p = p;
-
-        fprintf('--- %s: OR = %2.1f, CI = %2.1f-%2.1f, p = %1.10f --- \n',...
-            dataBase(subj).sub_label, stats.OddsRatio, stats.ConfidenceInterval(1), stats.ConfidenceInterval(2) , p)
-    end
-end
-
-%% make forest plot cceps vs spikes, based on whether p<0.05 was found with sign-test pre- and post stimulation
-close all
-
-maxCI = NaN(size(dataBase,2),1);
-h=figure(1);
-hold on
-for subj =1:size(dataBase,2)
-    if ~isempty(dataBase(subj).IEDs)
-
-        xline = dataBase(subj).stat_ccep_spikes.CI(1):0.1:dataBase(subj).stat_ccep_spikes.CI(2);
-
-        maxCI(subj) = dataBase(subj).stat_ccep_spikes.CI(2);
-        plot(xline,subj*ones(size(xline,2),1),'k')
-
-        plot(dataBase(subj).stat_ccep_spikes.OR,subj,'o','MarkerFaceColor','r','MarkerEdgeColor','r')
-
-        if dataBase(subj).stat_ccep_spikes.p <0.001
-            p_str = '***';
-        elseif dataBase(subj).stat_ccep_spikes.p <0.01 && dataBase(subj).stat_ccep_spikes.p > 0.001
-            p_str = '**';
-        elseif dataBase(subj).stat_ccep_spikes.p <0.05 && dataBase(subj).stat_ccep_spikes.p > 0.01
-            p_str = '*';
-        else
-            p_str = ' ';
-        end
-
-        text(dataBase(subj).stat_ccep_spikes.CI(2)+0.5,subj,p_str)%,'FontSize',8)
-    end
-end
-plot(ones(size(dataBase,2)+2,1),0:size(dataBase,2)+1,'k:')
-hold off
-
-ylim([0 size(dataBase,2)+1])
-xlim([0 ceil(max(maxCI))+2])
-
-h.Units = 'normalized';
-h.Position = [0.3 0.4 0.5 0.5];
-
-ax = gca;
-ax.YTickLabel = [{' '},{dataBase(:).sub_label},{' '}];
-xlabel('Odds ratio')
-title('Occurrence of spikes modulation and CCEP')
-
-%% spikes vs power suppression, based on whether p<0.05 was found with sign-test pre- and post stimulation
-
-for subj = 1:size(dataBase,2)
-    if ~isempty(dataBase(subj).IEDs)
-        spikes = zeros(size(dataBase(subj).IEDs.spikes_p));
-
-        spikes(dataBase(subj).IEDs.spikes_p<0.05) = 1;
-        ERSPmat = dataBase(subj).ERSPmat(:,dataBase(subj).IEDs.IEDch);
-
-        tbl = crosstab(ERSPmat(:),spikes(:));
-
-        if size(tbl,1) == 2 && size(tbl,2) == 2
-            [~,p,stats] = fishertest(tbl);
-        else
-            p = NaN;
-            stats.OddsRatio = NaN;
-            stats.ConfidenceInterval = [-Inf Inf];
-        end
-
-        dataBase(subj).stat_ERSP_spikes.OR = stats.OddsRatio;
-        dataBase(subj).stat_ERSP_spikes.CI = stats.ConfidenceInterval;
-        dataBase(subj).stat_ERSP_spikes.tbl = tbl;
-        dataBase(subj).stat_ERSP_spikes.p = p;
-
-        fprintf('--- %s: OR = %2.1f, CI = %2.1f-%2.1f, p = %1.10f --- \n',...
-            dataBase(subj).sub_label, stats.OddsRatio, stats.ConfidenceInterval(1), stats.ConfidenceInterval(2) , p)
-    end
-end
-
-%% make forest plot power suppression vs spikes, based on whether p<0.05 was found with sign-test pre- and post stimulation
-close all
-
-maxCI = NaN(size(dataBase,2),1);
-h=figure(1);
-hold on
-for subj = 1:size(dataBase,2)
-    if ~isempty(dataBase(subj).IEDs)
-
-        xline = dataBase(subj).stat_ERSP_spikes.CI(1):0.1:dataBase(subj).stat_ERSP_spikes.CI(2);
-
-        maxCI(subj) = dataBase(subj).stat_ERSP_spikes.CI(2);
-        plot(xline,subj*ones(size(xline,2),1),'k')
-
-        plot(dataBase(subj).stat_ERSP_spikes.OR,subj,'o','MarkerFaceColor','r','MarkerEdgeColor','r')
-
-        if dataBase(subj).stat_ERSP_spikes.p <0.001
-            p_str = '***';
-        elseif dataBase(subj).stat_ERSP_spikes.p <0.01 && dataBase(subj).stat_ERSP_spikes.p > 0.001
-            p_str = '**';
-        elseif dataBase(subj).stat_ERSP_spikes.p <0.05 && dataBase(subj).stat_ERSP_spikes.p > 0.01
-            p_str = '*';
-        else
-            p_str = ' ';
-        end
-
-        text(dataBase(subj).stat_ERSP_spikes.CI(2)+0.5,subj,p_str)%,'FontSize',8)
-    end
-end
-plot(ones(size(dataBase,2)+2,1),0:size(dataBase,2)+1,'k:')
-hold off
-
-ylim([0 size(dataBase,2)+1])
-xlim([0 ceil(max(maxCI))+2])
-
-h.Units = 'normalized';
-h.Position = [0.3 0.4 0.5 0.5];
-
-ax = gca;
-ax.YTickLabel = [{' '},{dataBase(:).sub_label},{' '}];
-xlabel('Odds ratio')
-title('Occurrence of spikes modulation and power suppression')
-
-
-%% make scatter plot latency en spikes ratio
-clc
-for subj = [1:5,7:size(dataBase,2)]
-    if ~isempty(dataBase(subj).IEDs)
-
-        CCEPmat = dataBase(subj).ccep.n1_peak_sample;
-        CCEPmat(dataBase(subj).ccep.checked == 0) = NaN;
-        if size(CCEPmat,1) > size(CCEPmat,2)
-            CCEPmat = CCEPmat';
-        end
-
-        CCEPmat = (CCEPmat(:,dataBase(subj).IEDs.IEDch)- 2*2048)/2048*1000;
-        spikesratio = dataBase(subj).IEDs.spikesratio ;
-
-        spikesratio(isnan(CCEPmat) | isnan(spikesratio)) = NaN;
-        CCEPmat(isnan(CCEPmat) | isnan(spikesratio)) = NaN;
-
-        [rho,p] = corr(CCEPmat(:),abs(log(spikesratio(:))),'rows','pairwise','type','spearman');
-
-        fprintf('--- %s: rho = %1.3f, p = %1.10f --- \n',...
-            dataBase(subj).sub_label, rho, p)
-
-        figure(subj),
-        scatter(CCEPmat(:),abs(log(spikesratio(:))))
-    end
-end
-
-%% spikes vs power suppression, based on whether p<0.05 was found with sign-test pre- and post stimulation
-
-for subj = 1:size(dataBase,2)
-    if ~isempty(dataBase(subj).IEDs)
-        spikes = zeros(size(dataBase(subj).IEDs.spikes_p));
-
-        spikes(dataBase(subj).IEDs.spikes_p<0.05) = 1;
-        ERSPmat = dataBase(subj).ERSPmat(:,dataBase(subj).IEDs.IEDch);
-
-        tbl = crosstab(ERSPmat(:),spikes(:));
-
-        [~,p,stats] = fishertest(tbl);
-
-        dataBase(subj).stat_ERSP_spikes.OR = stats.OddsRatio;
-        dataBase(subj).stat_ERSP_spikes.CI = stats.ConfidenceInterval;
-        dataBase(subj).stat_ERSP_spikes.tbl = tbl;
-        dataBase(subj).stat_ERSP_spikes.p = p;
-
-        fprintf('--- %s: OR = %2.1f, CI = %2.1f-%2.1f, p = %1.10f --- \n',...
-            dataBase(subj).sub_label, stats.OddsRatio, stats.ConfidenceInterval(1), stats.ConfidenceInterval(2) , p)
-    end
-end
-
-%% make forest plot ERSPs vs spikes based on sign test
-close all
-
-maxCI = NaN(size(dataBase,2),1);
-h=figure(1);
-hold on
-for subj =1:size(dataBase,2)
-    if ~isempty(dataBase(subj).IEDs)
-
-        xline = dataBase(subj).stat_ERSP_spikes.CI(1):0.1:dataBase(subj).stat_ERSP_spikes.CI(2);
-
-        maxCI(subj) = dataBase(subj).stat_ERSP_spikes.CI(2);
-        plot(xline,subj*ones(size(xline,2),1),'k')
-
-        plot(dataBase(subj).stat_ERSP_spikes.OR,subj,'o','MarkerFaceColor','r','MarkerEdgeColor','r')
-
-        if dataBase(subj).stat_ERSP_spikes.p <0.001
-            p_str = '***';
-        elseif dataBase(subj).stat_ERSP_spikes.p <0.01 && dataBase(subj).stat_ERSP_spikes.p > 0.001
-            p_str = '**';
-        elseif dataBase(subj).stat_ERSP_spikes.p <0.05 && dataBase(subj).stat_ERSP_spikes.p > 0.01
-            p_str = '*';
-        else
-            p_str = ' ';
-        end
-
-        text(dataBase(subj).stat_ERSP_spikes.CI(2)+0.5,subj,p_str)%,'FontSize',8)
-    end
-end
-plot(ones(size(dataBase,2)+2,1),0:size(dataBase,2)+1,'k:')
-hold off
-
-ylim([0 size(dataBase,2)+1])
-xlim([0 ceil(max(maxCI))+2])
-
-h.Units = 'normalized';
-h.Position = [0.3 0.4 0.5 0.5];
-
-ax = gca;
-ax.YTickLabel = [{' '},{dataBase(:).sub_label},{' '}];
-xlabel('Odds ratio')
-title('Occurrence of spikes modulation and power suppression')
-
-
-%% locate spikes per stimulus
-
-for subj = 1:size(dataBase,2)
-
-    % pre-allocation
-    spikelocs = cell(size(dataBase(subj).spikes,2),size(dataBase(subj).tt_epoch_sorted,2),size(dataBase(subj).tt_epoch_sorted,1));
-    spks1slocspre = cell(size(dataBase(subj).spikes,2),size(dataBase(subj).tt_epoch_sorted,2),size(dataBase(subj).tt_epoch_sorted,1));
-    spks1slocspost = cell(size(dataBase(subj).spikes,2),size(dataBase(subj).tt_epoch_sorted,2),size(dataBase(subj).tt_epoch_sorted,1));
-    spks1sprenum = NaN(size(dataBase(subj).spikes,2),size(dataBase(subj).tt_epoch_sorted,2),size(dataBase(subj).tt_epoch_sorted,1));
-    spks1spostnum = NaN(size(dataBase(subj).spikes,2),size(dataBase(subj).tt_epoch_sorted,2),size(dataBase(subj).tt_epoch_sorted,1));
-
-    for IEDchan = 1:size(dataBase(subj).spikes,2)
-        allspikes = [dataBase(subj).spikes{IEDchan}];
-
-        for stimp=1:size(dataBase(subj).tt_epoch_sorted,2)
-            for n=1:size(dataBase(subj).tt_epoch_sorted,1)
-
-                % find locations of spikes in cc_epoch_sorted
-                locs = allspikes(ismember(allspikes,dataBase(subj).tt_epoch_sorted(n,stimp,:)));
-
-                % epoch is now 4s: 2s pre and 2s post stimulation --> start of stimulation
-                startstim = round((dataBase(subj).tt_epoch_sorted(n,stimp,1)+dataBase(subj).tt_epoch_sorted(n,stimp,end))/2)-1;
-
-                % 10 ms pre and post stimulation, no spikes were detected,
-                % so determine spikes 1.01 s pre and post stimulation
-                start1spre = startstim - round(1.01*dataBase(subj).ccep_header.Fs);
-                stop1spre = startstim - round(0.01*dataBase(subj).ccep_header.Fs);
-
-                start1spost = startstim + round(0.01*dataBase(subj).ccep_header.Fs);
-                stop1spost = startstim + round(1.01*dataBase(subj).ccep_header.Fs);
-
-                spikes1spre = locs(ismember(locs,start1spre:stop1spre));
-                spikes1spost = locs(ismember(locs,start1spost:stop1spost));
-
-
-                spikelocs(IEDchan,stimp,n) = {locs};
-
-                spks1slocspre(IEDchan,stimp,n) = {spikes1spre};
-                spks1slocspost(IEDchan,stimp,n) = {spikes1spost};
-
-                spks1sprenum(IEDchan,stimp,n) = numel(spikes1spre);
-                spks1spostnum(IEDchan,stimp,n) = numel(spikes1spost);
-
-            end
-        end
-    end
-
-    dataBase(subj).spikelocs        = spikelocs;
-    dataBase(subj).spks1slocspre    = spks1slocspre;
-    dataBase(subj).spks1slocspost   = spks1slocspost;
-    dataBase(subj).spks1sprenum     = spks1sprenum;
-    dataBase(subj).spks1spostnum    = spks1spostnum;
-end
-
-
-%% make ratio spike change
-
-for subj = 1:size(dataBase,2)
-    spikeratio = NaN(size(dataBase(subj).IEDs.IEDch,2),size(dataBase(subj).tt_epoch_sorted,2));
-
-    for IEDchan = 1:size(dataBase(subj).IEDs.IEDch,2)
-        for stimp = 1:size(dataBase(subj).tt_epoch_sorted,2)
-
-            % if no spikes occurred before, and no spikes occurred after,
-            % than both are 0 and this leads to a NaN, although, in fact,
-            % this should be 0 (no spike change)
-            if all(squeeze(dataBase(subj).spks1spostnum(IEDchan,stimp,:)) == 0 & squeeze(dataBase(subj).spks1sprenum(IEDchan,stimp,:)) == 0)
-                spikeratio(IEDchan,stimp)= 0;
-            else
-                spikeratio(IEDchan,stimp) = nanmedian((squeeze(dataBase(subj).spks1spostnum(IEDchan,stimp,:)) - squeeze(dataBase(subj).spks1sprenum(IEDchan,stimp,:)))./...
-                    (squeeze(dataBase(subj).spks1spostnum(IEDchan,stimp,:)) + squeeze(dataBase(subj).spks1sprenum(IEDchan,stimp,:))));
-            end
-        end
-    end
-
-    dataBase(subj).spikeratio = spikeratio;
-end
-
-%% categorize into : 0=no change, 1=decrease, 2=increase
-spikeratioall = [];
-
-for subj = 1:size(dataBase,2)
-    spikeratioall = [spikeratioall; dataBase(subj).spikeratio(:)];
-end
-
-threshall = quantile(spikeratioall,[0.25,0.5,0.75]);
-
-thresh = [-1/7 0 1/7];
-
-for subj = 1: size(dataBase,2)
-    %     thresh = quantile(dataBase(subj).spikeratio(:),[0.25,0.5,0.75]);
-    SR_change = dataBase(subj).spikeratio;
-    SR_inc = dataBase(subj).spikeratio;
-    SR_dec = dataBase(subj).spikeratio;
-
-    SR_change(dataBase(subj).spikeratio>thresh(1) & dataBase(subj).spikeratio<thresh(3)) = 0;
-    SR_change(dataBase(subj).spikeratio<=thresh(1) | dataBase(subj).spikeratio>=thresh(3)) = 1;
-
-    % increase in spike ratio
-    SR_inc(dataBase(subj).spikeratio>thresh(1) & dataBase(subj).spikeratio<thresh(3)) = 0;
-    SR_inc(dataBase(subj).spikeratio<=thresh(1) ) = NaN;
-    SR_inc(dataBase(subj).spikeratio>=thresh(3)) = 1;
-
-    % decrease in spike ratio
-    SR_dec(dataBase(subj).spikeratio>thresh(1) & dataBase(subj).spikeratio<thresh(3)) = 0;
-    SR_dec(dataBase(subj).spikeratio<=thresh(1) ) = 1;
-    SR_dec(dataBase(subj).spikeratio>=thresh(3)) = NaN;
-
-    %     dataBase(subj).thresh = thresh;
-    dataBase(subj).SR_change = SR_change;
-    dataBase(subj).SR_inc = SR_inc;
-    dataBase(subj).SR_dec = SR_dec;
-end
-
-disp('Calculated spike ratios')
-% --> too much variation in distribution of spike ratios! Therefore,
-% combine all spike ratios and then determine thresholds!
-
-thresh = [0];
-
-for subj = 1: size(dataBase,2)
-    SR_change = dataBase(subj).spikeratio;
-
-    SR_change(dataBase(subj).spikeratio>thresh) = 1;
-    SR_change(dataBase(subj).spikeratio<=thresh) = -1;
-
-    % increase in spike ratio
-    %     SR_inc(dataBase(subj).spikeratio>thresh(1) & dataBase(subj).spikeratio<thresh(3)) = 0;
-    %     SR_inc(dataBase(subj).spikeratio<=thresh(1) ) = NaN;
-    %     SR_inc(dataBase(subj).spikeratio>=thresh(3)) = 1;
-    %
-    %     % decrease in spike ratio
-    %     SR_dec(dataBase(subj).spikeratio>thresh(1) & dataBase(subj).spikeratio<thresh(3)) = 0;
-    %     SR_dec(dataBase(subj).spikeratio<=thresh(1) ) = 1;
-    %     SR_dec(dataBase(subj).spikeratio>=thresh(3)) = NaN;
-    %
-    % %     dataBase(subj).thresh = thresh;
-    dataBase(subj).SR_change = SR_change;
-    %     dataBase(subj).SR_inc = SR_inc;
-    %     dataBase(subj).SR_dec = SR_dec;
-end
-
-disp('Calculated spike ratios')
-% --> too much variation in distribution of spike ratios! Therefore,
-% combine all spike ratios and then determine thresholds!
-
-
-
-%% analysis cceps_PS
-
-% pre-allocation
-cceps_PS_pat = NaN(size(dataBase,2),4);
-
-for subj = 1:size(dataBase,2)
-
-    % chi squared test
-    [tbl,~,pchi] = crosstab(dataBase(subj).ERSPmat(:),dataBase(subj).ccepmat(:));
-
-    % odds ratio
-    OR = (tbl(4)/tbl(3))/(tbl(2)/tbl(1));
-
-    cceps_PS_pat(subj,:) = [tbl(4), tbl(3), tbl(2), tbl(1)]/sum(tbl(:));
-
-    dataBase(subj).OR_ccepERSP = OR;
-    dataBase(subj).p_ccepERSP = pchi;
-end
-
-%% figure stacked bar plot
-
-figure(1), bar(cceps_PS_pat)
-legend({'ccep & PS','ccep & no PS','No ccep & PS','No ccep & no PS'})
-xlabel('Patient #')
-ylabel('Percentage of total number of connections')
-ylim([0 1])
-
-%% analysis cceps_spikes && ERSP_spikes --> only in part of the data
-
-% only part of cceps is used
-for subj = 1:size(dataBase,2)
-    dataBase(subj).ccepmatIED = dataBase(subj).ccepmat(dataBase(subj).IEDch,:);
-    dataBase(subj).ERSPmatIED = dataBase(subj).ERSPmat(dataBase(subj).IEDch,:);
-
-end
-
-%% analysis cceps_spikes
-% pre-allocation
-SRchange_ccep_pat = NaN(size(dataBase,2),4);
-
-% chi squared test
-for subj = [1:4,6,8,10]%1:size(dataBase,2)
-
-    % chi squared test
-    [tbl,~,pchi] = crosstab(dataBase(subj).ccepmatIED(:),dataBase(subj).SR_change(:));
-
-    % odds ratio
-    OR = (tbl(4)/tbl(3))/(tbl(2)/tbl(1));
-
-    SRchange_ccep_pat(subj,:) = [tbl(4), tbl(3), tbl(2), tbl(1)]/sum(tbl(:));
-
-    dataBase(subj).OR_ccep_SRchange = OR;
-    dataBase(subj).p_ccep_SRchange = pchi;
-end
-
-%% figure stacked bar plot
-
-figure(1), bar(SRchange_ccep_pat)
-legend({'ccep & spike change','ccep & no spike change','No ccep & spike change','No ccep & no spike change'})
-xlabel('Patient #')
-ylabel('Percentage of total number of connections')
-ylim([0 1])
-
-%% analysis cceps_spikes increase
-% pre-allocation
-SRinc_ccep_pat = NaN(size(dataBase,2),4);
-
-% chi squared test
-for subj = 1:size(dataBase,2)
-
-    if dataBase(subj).p_ccep_SRchange <= 0.05
-        % chi squared test
-        [tbl,~,pchi] = crosstab(dataBase(subj).ccepmatIED(:),dataBase(subj).SR_inc(:));
-
-        % odds ratio
-        OR = (tbl(4)/tbl(3))/(tbl(2)/tbl(1));
-
-        SRinc_ccep_pat(subj,:) = [tbl(4), tbl(3), tbl(2), tbl(1)]/sum(tbl(:));
-    else
-        OR = [];
-        SRinc_ccep_pat(subj,:) = [NaN, NaN, NaN, NaN];
-        pchi = [];
-    end
-
-    dataBase(subj).OR_ccep_SRinc = OR;
-    dataBase(subj).p_ccep_SRinc = pchi;
-end
-
-%% figure stacked bar plot
-
-figure(1), bar(SRinc_ccep_pat)
-legend({'ccep & spike increase','ccep & no spike change','No ccep & spike increase','No ccep & no spike change'})
-xlabel('Patient #')
-ylabel('Percentage of total number of connections')
-ylim([0 1])
-
-%% analysis cceps_spikes decrease
-% pre-allocation
-SRdec_ccep_pat = NaN(size(dataBase,2),4);
-
-% chi squared test
-for subj = 1:size(dataBase,2)
-
-    if dataBase(subj).p_ccep_SRchange <= 0.05
-        % chi squared test
-        [tbl,~,pchi] = crosstab(dataBase(subj).ccepmatIED(:),dataBase(subj).SR_dec(:));
-
-        % odds ratio
-        OR = (tbl(4)/tbl(3))/(tbl(2)/tbl(1));
-
-        SRdec_ccep_pat(subj,:) = [tbl(4), tbl(3), tbl(2), tbl(1)]/sum(tbl(:));
-    else
-        OR = [];
-        SRdec_ccep_pat(subj,:) = [NaN, NaN, NaN, NaN];
-        pchi = [];
-    end
-
-    dataBase(subj).OR_ccep_SRdec = OR;
-    dataBase(subj).p_ccep_SRdec = pchi;
-end
-
-%% figure stacked bar plot
-
-figure(1), bar(SRdec_ccep_pat)
-legend({'ccep & spike decrease','ccep & no spike change','No ccep & spike decrease','No ccep & no spike change'})
-xlabel('Patient #')
-ylabel('Percentage of total number of connections')
-ylim([0 1])
-
-
-%% analysis PSs_spikes
-% pre-allocation
-SRchange_ERSP_pat = NaN(size(dataBase,2),4);
-
-% chi squared test
-for subj = [1:4,6,8,10]%1:size(dataBase,2)
-
-    % chi squared test
-    [tbl,~,pchi] = crosstab(dataBase(subj).ERSPmatIED(:),dataBase(subj).SR_change(:));
-
-    % odds ratio
-    OR = (tbl(4)/tbl(3))/(tbl(2)/tbl(1));
-
-    SRchange_ERSP_pat(subj,:) = [tbl(4), tbl(3), tbl(2), tbl(1)]/sum(tbl(:));
-
-    dataBase(subj).OR_ERSP_SRchange = OR;
-    dataBase(subj).p_ERSP_SRchange = pchi;
-end
-
-%% figure stacked bar plot
-
-figure(1), bar(SRchange_ERSP_pat)
-legend({'SP & spike change','SP & no spike change','No SP & spike change','No SP & no spike change'})
-xlabel('Patient #')
-ylabel('Percentage of total number of connections')
-ylim([0 1])
-
-%% analysis ERSPs_spikes increase
-% pre-allocation
-SRinc_ERSP_pat = NaN(size(dataBase,2),4);
-
-% chi squared test
-for subj = 1:size(dataBase,2)
-
-    if dataBase(subj).p_ERSP_SRchange <= 0.05
-        % chi squared test
-        [tbl,~,pchi] = crosstab(dataBase(subj).ERSPmatIED(:),dataBase(subj).SR_inc(:));
-
-        % odds ratio
-        OR = (tbl(4)/tbl(3))/(tbl(2)/tbl(1));
-
-        SRinc_ERSP_pat(subj,:) = [tbl(4), tbl(3), tbl(2), tbl(1)]/sum(tbl(:));
-    else
-        OR = [];
-        SRinc_ERSP_pat(subj,:) = [NaN, NaN, NaN, NaN];
-        pchi = [];
-    end
-
-    dataBase(subj).OR_ERSP_SRinc = OR;
-    dataBase(subj).p_ERSP_SRinc = pchi;
-end
-
-%% figure stacked bar plot
-
-figure(1), bar(SRinc_ERSP_pat)
-legend({'SP & spike increase','SP & no spike change','No SP & spike increase','No SP & no spike change'})
-xlabel('Patient #')
-ylabel('Percentage of total number of connections')
-ylim([0 1])
-
-%% analysis SP_spikes decrease
-% pre-allocation
-SRdec_ERSP_pat = NaN(size(dataBase,2),4);
-
-% chi squared test
-for subj = 1:size(dataBase,2)
-
-    if dataBase(subj).p_ERSP_SRchange <= 0.05
-        % chi squared test
-        [tbl,~,pchi] = crosstab(dataBase(subj).ERSPmatIED(:),dataBase(subj).SR_dec(:));
-
-        % odds ratio
-        OR = (tbl(4)/tbl(3))/(tbl(2)/tbl(1));
-
-        SRdec_ERSP_pat(subj,:) = [tbl(4), tbl(3), tbl(2), tbl(1)]/sum(tbl(:));
-    else
-        OR = [];
-        SRdec_ERSP_pat(subj,:) = [NaN, NaN, NaN, NaN];
-        pchi = [];
-    end
-
-    dataBase(subj).OR_ERSP_SRdec = OR;
-    dataBase(subj).p_ERSP_SRdec = pchi;
-end
-
-%% figure stacked bar plot
-
-figure(1), bar(SRdec_ERSP_pat)
-legend({'SP & spike decrease','SP & no spike change','No SP & spike decrease','No SP & no spike change'})
-xlabel('Patient #')
-ylabel('Percentage of total number of connections')
-ylim([0 1])
-
-
-%% figure
-
-figure,
-
-subj=1
-
-for i=1%:size(dataBase(subj).spikes,2)
-    plot(dataBase(subj).spikes{i},i*ones(1,size(dataBase(subj).spikes{i},2)),'.')
-
-end
-
+disp('Spike ratio is calculated.')
+
+% housekeeping
+clear ans ch epochsamp n num postCount preCount removeSpike samp_sel
+clear samp_stim selDur selEpoch selEpochsamp selEpochspikessamp spikespost 
+clear spikespre spikesratio spikessamp stim subj total_epoch totEpochspikessamp
+
+%% end of script
+% make figures used in article by running the scripts ccepSp03_FigX.m

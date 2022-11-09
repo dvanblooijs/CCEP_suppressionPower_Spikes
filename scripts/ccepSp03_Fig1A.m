@@ -2,43 +2,17 @@
 % based on script in
 % https://github.com/MultimodalNeuroimagingLab/mnl_ccepBids/scripts/makeFig1A_plotMNI.m
 
-%% load first ccepSp03_analysis_ERs_PS_spikes.m
-
-%% patient settings
-
-files = dir(myDataPath.dataPath);
-idx_subj = contains({files(:).name},'sub-');
-files_subj = files(idx_subj);
-cfg = struct([]);
-
-for subj = 1:size(files_subj,1)
-
-    cfg(subj).sub_labels = files_subj(subj).name;
-
-    files = dir(fullfile(files_subj(subj).folder,files_subj(subj).name));
-    idx_ses = contains({files(:).name},'ses-');
-    files_ses = files(idx_ses);
-
-    cfg(subj).ses_label = files_ses(1).name;
-
-    cfg(subj).task_label = 'task-SPESclin';
-
-    files = dir(fullfile(files_ses(1).folder,files_ses(1).name,'ieeg'));
-    idx_eeg = contains({files(:).name},'.eeg');
-    files_eeg = files(idx_eeg);
-
-    for run = 1:size(files_eeg,1)
-        runTemp = extractBetween(files_eeg(run).name,'run-','_ieeg');
-        cfg(subj).run_label{run} = ['run-', runTemp{1}];
-    end
-end
+%% first run ccepSp03_analysis_ERs_PS_spikes.m
+close all
+clc
 
 %% add electrodes.tsv
 
-for subj = 1:size(cfg,2)
+for subj = 1:size(dataBase,2)
     
-    % preprocess electrode positions
+    % convert electrode positions into a matrix
     if iscell(dataBase(subj).tb_electrodes.x)
+    
         elecmatrix = NaN(size(dataBase(subj).tb_electrodes,1),3);
         for ll = 1:size(dataBase(subj).tb_electrodes,1)
             if ~isequal(dataBase(subj).tb_electrodes.x{ll},'n/a')
@@ -48,6 +22,7 @@ for subj = 1:size(cfg,2)
             end
         end
     else
+        
         elecmatrix = [dataBase(subj).tb_electrodes.x,...
             dataBase(subj).tb_electrodes.y,...
             dataBase(subj).tb_electrodes.z];
@@ -56,7 +31,10 @@ for subj = 1:size(cfg,2)
     dataBase(subj).elecmatrix = elecmatrix; %#ok<SAGROW> 
 end
 
-disp('All electrodes.tsv are loaded')
+disp('All electrodes positions are converted to a matrix.')
+
+% housekeeping
+clear elecmatrix ll subj
 
 %% load mni305 pial
 % Freesurfer subjects directory
@@ -66,11 +44,15 @@ FSsubjectsdir = fullfile(myDataPath.dataPath,'derivatives','freesurfer');
 [Lmnipial_vert,Lmnipial_face] = read_surf(fullfile(FSsubjectsdir,'fsaverage','surf','lh.pial'));
 [Rmnipial_vert,Rmnipial_face] = read_surf(fullfile(FSsubjectsdir,'fsaverage','surf','rh.pial'));
 
+% housekeeping
+clear FSsubjectsdir 
+
 %% plot subject electrodes on mni brain
 
 close all
 
 subj = 8; % in Fig1A of the article number 8 is used
+mkrsz = 30;
 
 % get electrodes info
 elCoords = dataBase(subj).elecmatrix;
@@ -108,21 +90,21 @@ hold on
 plot3(els(:,1), ...
     els(:,2), ...
     els(:,3), ...
-    '.','Color', 'k','MarkerSize',30)
+    '.','Color', 'k','MarkerSize',mkrsz)
 
 % stimulated and response electrode:
 stimelec = contains(dataBase(subj).tb_electrodes.name,{'C23','C24'});
 respelec = contains(dataBase(subj).tb_electrodes.name,'C16');
 plot3(els(stimelec==1,1), els(stimelec==1,2), els(stimelec==1,3), ...
-    '.','Color', [184/256, 26/256, 93/256],'MarkerSize',25)
+    '.','Color', [184/256, 26/256, 93/256],'MarkerSize',0.8*mkrsz)
 plot3(els(respelec==1,1), els(respelec==1,2), els(respelec==1,3), ...
-    '.','Color', [0/256, 156/256, 180/256],'MarkerSize',25)
+    '.','Color', [0/256, 156/256, 180/256],'MarkerSize',0.8*mkrsz)
 
 % electrodes with IEDs
 plot3(els(IEDelec==1,1), ...
     els(IEDelec==1,2), ...
     els(IEDelec==1,3), ...
-    '.','Color', [240/256, 240/256, 240/256],'MarkerSize',7)
+    '.','Color', [240/256, 240/256, 240/256],'MarkerSize',0.3*mkrsz) % color is almost white, otherwise it is not saved correctly
 
 hold off
 
@@ -133,6 +115,11 @@ figureName = sprintf('%s/fig1a_brain_%s',...
 
 set(gcf,'PaperPositionMode','auto')
 print('-dpng','-r300',figureName)
-print('-painters','-depsc',figureName)
 
-fprintf('Figure is saved as .png and .eps in \n %s \n',figureName)
+fprintf('Figure is saved as .png in \n %s \n',figureName)
+
+% housekeeping
+clear a_offset ans elCoords els figureName g hemi IEDelec Lmnipial_face 
+clear Lmnipial_vert mkrsz respelec Rmnipial_face Rmnipial_vert subj v_d stimelec
+
+%% end of script

@@ -42,7 +42,7 @@ axes1.YLim = [freqs(1)-0.5*pixelHeight freqs(end)+0.5*pixelHeight];
 % ax.YTickLabels = max(freqs):-50:min(freqs);
 % ax.XTick = 1:20:size(times,2);
 % ax.XTickLabels = round(times(ax.XTick),1,'significant');
-xlabel('Time(ms)')
+xlabel('Time (ms)')
 ylabel('Frequency (Hz)')
 
 end

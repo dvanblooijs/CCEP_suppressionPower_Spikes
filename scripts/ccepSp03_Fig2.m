@@ -2,44 +2,13 @@
 % based on script in
 % https://github.com/MultimodalNeuroimagingLab/mnl_ccepBids/scripts/makeFig1A_plotMNI.m
 
-
-
-%% load first ccepSp03_analysis_ERs_PS_spikes.m
-
-%% patient settings
-
-files = dir(myDataPath.dataPath);
-idx_subj = contains({files(:).name},'sub-');
-files_subj = files(idx_subj);
-cfg = struct([]);
-
-for subj = 1:size(files_subj,1)
-
-    cfg(subj).sub_labels = files_subj(subj).name;
-
-    files = dir(fullfile(files_subj(subj).folder,files_subj(subj).name));
-    idx_ses = contains({files(:).name},'ses-');
-    files_ses = files(idx_ses);
-
-    cfg(subj).ses_label = files_ses(1).name;
-
-    cfg(subj).task_label = 'task-SPESclin';
-
-    files = dir(fullfile(files_ses(1).folder,files_ses(1).name,'ieeg'));
-    idx_eeg = contains({files(:).name},'.eeg');
-    files_eeg = files(idx_eeg);
-
-    for run = 1:size(files_eeg,1)
-        runTemp = extractBetween(files_eeg(run).name,'run-','_ieeg');
-        cfg(subj).run_label{run} = ['run-', runTemp{1}];
-    end
-end
+%% first run ccepSp03_analysis_ERs_PS_spikes.m
 
 %% add electrodes.tsv
 
-for subj = 1:size(cfg,2)
+for subj = 1:size(dataBase,2)
     
-    % preprocess electrode positions
+    % convert electrode positions into a matrix
     if iscell(dataBase(subj).tb_electrodes.x)
         elecmatrix = NaN(size(dataBase(subj).tb_electrodes,1),3);
         for ll = 1:size(dataBase(subj).tb_electrodes,1)
@@ -86,7 +55,11 @@ for subj = 1:size(cfg,2)
     dataBase(subj).Jaccard = Jaccard; %#ok<SAGROW>
 end
 
-disp('All electrodes.tsv are loaded')
+disp('All electrodes positions are converted to a matrix.')
+
+% housekeeping
+clear both CCEPelec CCEPmat CCEPnum elecmatrix ERSPCCEPcomb ERSPelec 
+clear ERSPmat ERSPnum IEDmat Jaccard ll numstim subj
 
 %% load mni305 pial
 % Freesurfer subjects directory
@@ -96,71 +69,86 @@ FSsubjectsdir = fullfile(myDataPath.dataPath,'derivatives','freesurfer');
 [Lmnipial_vert,Lmnipial_face] = read_surf(fullfile(FSsubjectsdir,'fsaverage','surf','lh.pial'));
 [Rmnipial_vert,Rmnipial_face] = read_surf(fullfile(FSsubjectsdir,'fsaverage','surf','rh.pial'));
 
+% housekeeping
+clear FSsubjectsdir
+
 %% add all electrodes left or right hemisphere into one 
 % variable: allmni_coords 
 
-allmni_coords = [];
-allmni_labels = [];
+all_mnicoords = [];
 all_hemi = [];
 all_IED = [];
-all_ERSPelec = [];
-all_CCEPelec = [];
-all_percCCEPERSP = [];
+all_ERSPnormelec = [];
+all_CCEPnormelec = [];
+% all_percCCEPERSP = [];
 all_Jaccard = [];
 
 for subj = 1:size(dataBase,2)
 
-    allmni_coords = [allmni_coords; dataBase(subj).elecmatrix]; %#ok<AGROW>
+    all_mnicoords = [all_mnicoords; dataBase(subj).elecmatrix]; %#ok<AGROW>
     all_hemi = [all_hemi; dataBase(subj).tb_electrodes.hemisphere]; %#ok<AGROW>
     all_IED = [all_IED; dataBase(subj).IEDmat];  %#ok<AGROW>
-    all_ERSPelec = [all_ERSPelec; dataBase(subj).ERSPmatnorm]; %#ok<AGROW> 
-    all_CCEPelec = [all_CCEPelec; dataBase(subj).CCEPmatnorm]; %#ok<AGROW> 
+    all_ERSPnormelec = [all_ERSPnormelec; dataBase(subj).ERSPmatnorm]; %#ok<AGROW> 
+    all_CCEPnormelec = [all_CCEPnormelec; dataBase(subj).CCEPmatnorm]; %#ok<AGROW> 
 %     all_percCCEPERSP = [all_percCCEPERSP, dataBase(subj).percCCEPERSP]; %#ok<AGROW> 
        all_Jaccard = [all_Jaccard, dataBase(subj).Jaccard]; %#ok<AGROW>
 end
 
-%% set colorscale
+% housekeeping
+clear subj
+
+%% set characteristics in figures
 
 cmap = parula(101); % 0-1 with steps of 0.01
+mkrsz = 30;
 
-%% Plot figure with left and right pial with electrodes in mni space 
+% view left and right
+v_dL = [270 0];
+v_dR = [96 6];
+
+% make sure electrodes pop out: Left and Right
+a_offsetLview = .1*max(abs(all_mnicoords(:,1)))*[cosd(v_dL(1)-90)*cosd(v_dL(2)) sind(v_dL(1)-90)*cosd(v_dL(2)) sind(v_dL(2))];
+all_elecLview = all_mnicoords+repmat(a_offsetLview,size(all_mnicoords,1),1);      
+
+a_offsetRview = .1*max(abs(all_mnicoords(:,1)))*[cosd(v_dR(1)-90)*cosd(v_dR(2)) sind(v_dR(1)-90)*cosd(v_dR(2)) sind(v_dR(2))];
+all_elecRview = all_mnicoords+repmat(a_offsetRview,size(all_mnicoords,1),1);      
+
+% brain surface
+gL.faces = Lmnipial_face+1;
+gL.vertices = Lmnipial_vert;
+gL = gifti(gL);
+
+gR.faces = Rmnipial_face+1;
+gR.vertices = Rmnipial_vert;
+gR = gifti(gR);
+
+% housekeeping
+clear Rmnipial_face Rmnipial_vert Lmnipial_face Lmnipial_vert
+
+%% Plot figure with left pial with electrodes in mni space 
 % and normalized number of CCEPs
 
-v_d = [270 0];
-
 figure;
-gl.faces = Lmnipial_face+1;
-gl.vertices = Lmnipial_vert;
-gl = gifti(gl);
-tH = ieeg_RenderGifti(gl); %#ok<NASGU>
-% 
-% make sure electrodes pop out
-a_offset = .1*max(abs(allmni_coords(:,1)))*[cosd(v_d(1)-90)*cosd(v_d(2)) sind(v_d(1)-90)*cosd(v_d(2)) sind(v_d(2))];
-els = allmni_coords+repmat(a_offset,size(allmni_coords,1),1);      
+ieeg_RenderGifti(gL); 
 
 hold on, 
-for elec = 1:size(els,1)
+for elec = 1:size(all_elecLview,1)
     if strcmpi(all_hemi(elec),'L')
         
-        cmapnum = round(all_CCEPelec(elec)*100)+1;
-        plot3(els(elec,1), els(elec,2),els(elec,3),...
-            '.','Color',cmap(cmapnum,:),'MarkerSize',20);
+        cmapnum = round(all_CCEPnormelec(elec)*100)+1;
+        plot3(all_elecLview(elec,1), all_elecLview(elec,2),all_elecLview(elec,3),...
+            '.','Color',cmap(cmapnum,:),'MarkerSize',mkrsz);
 
     end
 end
 
-plot3(els(ismember(all_hemi,'L') & all_IED==1,1), ...
-    els(ismember(all_hemi,'L') & all_IED==1,2), ...
-    els(ismember(all_hemi,'L') & all_IED==1,3), ...
-    '.','Color', [240/256, 240/256, 240/256],'MarkerSize',7)
+plot3(all_elecLview(ismember(all_hemi,'L') & all_IED==1,1), ...
+    all_elecLview(ismember(all_hemi,'L') & all_IED==1,2), ...
+    all_elecLview(ismember(all_hemi,'L') & all_IED==1,3), ...
+    '.','Color', [240/256, 240/256, 240/256], ...
+    'MarkerSize',0.4*mkrsz) % color is almost white
 
-% set(tH,'FaceAlpha',.5) % make transparent
-ieeg_viewLight(v_d(1),v_d(2))
-
-% h=colorbar;
-% limits = h.Limits;
-% h.Ticks = limits(1):(limits(2)-limits(1))/10:limits(2);
-% h.TickLabels = {'0','0.1','0.2','0.3','0.4','0.5','0.6','0.7','0.8','0.9','1'}; 
+ieeg_viewLight(v_dL(1),v_dL(2))
 
 % title('Normalized number of CCEPs')
 
@@ -169,50 +157,37 @@ figureName = sprintf('%s/fig2_brainL_normCCEP',...
 
 set(gcf,'PaperPositionMode','auto')
 print('-dpng','-r300',figureName)
-% print('-painters','-depsc',figureName)
 
 fprintf('Figure is saved as .png in \n %s \n',figureName)
 
+% housekeeping
+clear ans cmapnum elec figureName
 
 %% Plot figure with right pial with electrodes in mni space
-% and normalized CCEP
-
-v_d = [96 6];
+% and normalized number of CCEP
 
 figure
-gr.faces = Rmnipial_face+1;
-gr.vertices = Rmnipial_vert;
-gr = gifti(gr);
-ieeg_RenderGifti(gr); 
-
-% make sure electrodes pop out
-a_offset = .1*max(abs(allmni_coords(:,1)))*[cosd(v_d(1)-90)*cosd(v_d(2)) sind(v_d(1)-90)*cosd(v_d(2)) sind(v_d(2))];
-els = allmni_coords+repmat(a_offset,size(allmni_coords,1),1);      
+ieeg_RenderGifti(gR); 
 
 hold on
-for elec = 1:size(els,1)
+for elec = 1:size(all_elecRview,1)
     if strcmpi(all_hemi(elec),'R')
 
-        cmapnum = round(all_CCEPelec(elec)*100)+1;
-        plot3(els(elec,1), els(elec,2),els(elec,3),...
-            '.','Color',cmap(cmapnum,:),'MarkerSize',20);
+        cmapnum = round(all_CCEPnormelec(elec)*100)+1;
+        plot3(all_elecRview(elec,1), all_elecRview(elec,2),all_elecRview(elec,3),...
+            '.','Color',cmap(cmapnum,:),'MarkerSize',mkrsz);
 
     end
 end
 
-plot3(els(ismember(all_hemi,'R') & all_IED==1,1), ...
-    els(ismember(all_hemi,'R') & all_IED==1,2), ...
-    els(ismember(all_hemi,'R') & all_IED==1,3), ...
-    '.','Color', [240/256, 240/256, 240/256],'MarkerSize',7)
+plot3(all_elecRview(ismember(all_hemi,'R') & all_IED==1,1), ...
+    all_elecRview(ismember(all_hemi,'R') & all_IED==1,2), ...
+    all_elecRview(ismember(all_hemi,'R') & all_IED==1,3), ...
+    '.','Color', [240/256, 240/256, 240/256], ...
+    'MarkerSize',0.4*mkrsz)
 
-% set(tH,'FaceAlpha',.5) % make transparent
-ieeg_viewLight(v_d(1),v_d(2))
+ieeg_viewLight(v_dR(1),v_dR(2))
 
-% h=colorbar;
-% limits = h.Limits;
-% h.Ticks = limits(1):(limits(2)-limits(1))/10:limits(2);
-% h.TickLabels = {'0','0.1','0.2','0.3','0.4','0.5','0.6','0.7','0.8','0.9','1'}; %NOG IETS AANPASSEN!!
-% 
 % title('Normalized number of CCEPs')
 
 figureName = sprintf('%s/fig2_brainR_normCCEP',...
@@ -220,49 +195,36 @@ figureName = sprintf('%s/fig2_brainR_normCCEP',...
 
 set(gcf,'PaperPositionMode','auto')
 print('-dpng','-r300',figureName)
-% print('-painters','-depsc',figureName)
 
 fprintf('Figure is saved as .png in \n %s \n',figureName)
+
+clear ans cmapnum elec figureName
 
 %% Plot figure with left and right pial with electrodes in mni space 
 % and normalized number of ERSPs
 
-v_d = [270 0];
-
 figure;
-gl.faces = Lmnipial_face+1;
-gl.vertices = Lmnipial_vert;
-gl = gifti(gl);
-ieeg_RenderGifti(gl); 
-% 
-% make sure electrodes pop out
-a_offset = .1*max(abs(allmni_coords(:,1)))*[cosd(v_d(1)-90)*cosd(v_d(2)) sind(v_d(1)-90)*cosd(v_d(2)) sind(v_d(2))];
-els = allmni_coords+repmat(a_offset,size(allmni_coords,1),1);      
+ieeg_RenderGifti(gL); 
 
 hold on, 
-for elec = 1:size(els,1)
+for elec = 1:size(all_elecLview,1)
     if strcmpi(all_hemi(elec),'L')
         
-        cmapnum = round(all_ERSPelec(elec)*100)+1;
-        plot3(els(elec,1), els(elec,2),els(elec,3),...
-            '.','Color',cmap(cmapnum,:),'MarkerSize',20);
+        cmapnum = round(all_ERSPnormelec(elec)*100)+1;
+        plot3(all_elecLview(elec,1), all_elecLview(elec,2),all_elecLview(elec,3),...
+            '.','Color',cmap(cmapnum,:),'MarkerSize',mkrsz);
 
     end
 end
 
-plot3(els(ismember(all_hemi,'L') & all_IED==1,1), ...
-    els(ismember(all_hemi,'L') & all_IED==1,2), ...
-    els(ismember(all_hemi,'L') & all_IED==1,3), ...
-    '.','Color', [240/256, 240/256, 240/256],'MarkerSize',7)
+plot3(all_elecLview(ismember(all_hemi,'L') & all_IED==1,1), ...
+    all_elecLview(ismember(all_hemi,'L') & all_IED==1,2), ...
+    all_elecLview(ismember(all_hemi,'L') & all_IED==1,3), ...
+    '.','Color', [240/256, 240/256, 240/256], ...
+    'MarkerSize',0.4*mkrsz)
 
-% set(tH,'FaceAlpha',.5) % make transparent
-ieeg_viewLight(v_d(1),v_d(2))
+ieeg_viewLight(v_dL(1),v_dL(2))
 
-% h=colorbar;
-% limits = h.Limits;
-% h.Ticks = limits(1):(limits(2)-limits(1))/10:limits(2);
-% h.TickLabels = {'0','0.1','0.2','0.3','0.4','0.5','0.6','0.7','0.8','0.9','1'}; 
-% 
 % title('Normalized number of ERSPs')
 
 figureName = sprintf('%s/fig2_brainL_normERSP',...
@@ -270,50 +232,36 @@ figureName = sprintf('%s/fig2_brainL_normERSP',...
 
 set(gcf,'PaperPositionMode','auto')
 print('-dpng','-r300',figureName)
-% print('-painters','-depsc',figureName)
 
 fprintf('Figure is saved as .png in \n %s \n',figureName)
 
+% housekeeping
+clear ans cmapnum elec figureName
 
 %% Plot figure with right pial with electrodes in mni space
 % and normalized ERSP
 
-v_d = [96 6];
-
 figure
-gr.faces = Rmnipial_face+1;
-gr.vertices = Rmnipial_vert;
-gr = gifti(gr);
-ieeg_RenderGifti(gr); 
-
-% make sure electrodes pop out
-a_offset = .1*max(abs(allmni_coords(:,1)))*[cosd(v_d(1)-90)*cosd(v_d(2)) sind(v_d(1)-90)*cosd(v_d(2)) sind(v_d(2))];
-els = allmni_coords+repmat(a_offset,size(allmni_coords,1),1);      
+ieeg_RenderGifti(gR); 
 
 hold on
-for elec = 1:size(els,1)
+for elec = 1:size(all_elecRview,1)
     if strcmpi(all_hemi(elec),'R')
 
-        cmapnum = round(all_ERSPelec(elec)*100)+1;
-        plot3(els(elec,1), els(elec,2),els(elec,3),...
-            '.','Color',cmap(cmapnum,:),'MarkerSize',20);
+        cmapnum = round(all_ERSPnormelec(elec)*100)+1;
+        plot3(all_elecRview(elec,1), all_elecRview(elec,2),all_elecRview(elec,3),...
+            '.','Color',cmap(cmapnum,:),'MarkerSize',mkrsz);
 
     end
 end
 
-plot3(els(ismember(all_hemi,'R') & all_IED==1,1), ...
-    els(ismember(all_hemi,'R') & all_IED==1,2), ...
-    els(ismember(all_hemi,'R') & all_IED==1,3), ...
-    '.','Color', [240/256, 240/256, 240/256],'MarkerSize',7)
+plot3(all_elecRview(ismember(all_hemi,'R') & all_IED==1,1), ...
+    all_elecRview(ismember(all_hemi,'R') & all_IED==1,2), ...
+    all_elecRview(ismember(all_hemi,'R') & all_IED==1,3), ...
+    '.','Color', [240/256, 240/256, 240/256],'MarkerSize',0.4*mkrsz)
 
-% set(tH,'FaceAlpha',.5) % make transparent
-ieeg_viewLight(v_d(1),v_d(2))
+ieeg_viewLight(v_dR(1),v_dR(2))
 
-% h=colorbar;
-% limits = h.Limits;
-% h.Ticks = limits(1):(limits(2)-limits(1))/10:limits(2);
-% h.TickLabels = {'0','0.1','0.2','0.3','0.4','0.5','0.6','0.7','0.8','0.9','1'}; %NOG IETS AANPASSEN!!
-% 
 % title('Normalized number of ERSPs')
 
 figureName = sprintf('%s/fig2_brainR_normERSP',...
@@ -321,49 +269,36 @@ figureName = sprintf('%s/fig2_brainR_normERSP',...
 
 set(gcf,'PaperPositionMode','auto')
 print('-dpng','-r300',figureName)
-% print('-painters','-depsc',figureName)
 
 fprintf('Figure is saved as .png in \n %s \n',figureName)
 
-%% Plot figure with left and right pial with electrodes in mni space 
+% housekeeping
+clear ans cmapnum elec figureName
+
+%% Plot figure with left pial with electrodes in mni space 
 % and Jaccard index
 
-v_d = [270 0];
-
-F = figure;
-gl.faces = Lmnipial_face+1;
-gl.vertices = Lmnipial_vert;
-gl = gifti(gl);
-tH = ieeg_RenderGifti(gl); %#ok<NASGU>
-% 
-% make sure electrodes pop out
-a_offset = .1*max(abs(allmni_coords(:,1)))*[cosd(v_d(1)-90)*cosd(v_d(2)) sind(v_d(1)-90)*cosd(v_d(2)) sind(v_d(2))];
-els = allmni_coords+repmat(a_offset,size(allmni_coords,1),1);      
+figure;
+ieeg_RenderGifti(gL); 
 
 hold on, 
-for elec = 1:size(els,1)
+for elec = 1:size(all_elecLview,1)
     if strcmpi(all_hemi(elec),'L')
         
         cmapnum = round(all_Jaccard(elec)*100)+1;
-        plot3(els(elec,1), els(elec,2),els(elec,3),...
-            '.','Color',cmap(cmapnum,:),'MarkerSize',20);
+        plot3(all_elecLview(elec,1), all_elecLview(elec,2),all_elecLview(elec,3),...
+            '.','Color',cmap(cmapnum,:),'MarkerSize',mkrsz);
 
     end
 end
 
-plot3(els(ismember(all_hemi,'L') & all_IED==1,1), ...
-    els(ismember(all_hemi,'L') & all_IED==1,2), ...
-    els(ismember(all_hemi,'L') & all_IED==1,3), ...
-    '.','Color', [240/256, 240/256, 240/256],'MarkerSize',7)
+plot3(all_elecLview(ismember(all_hemi,'L') & all_IED==1,1), ...
+    all_elecLview(ismember(all_hemi,'L') & all_IED==1,2), ...
+    all_elecLview(ismember(all_hemi,'L') & all_IED==1,3), ...
+    '.','Color', [240/256, 240/256, 240/256],'MarkerSize',0.4*mkrsz)
 
-% set(tH,'FaceAlpha',.5) % make transparent
-ieeg_viewLight(v_d(1),v_d(2))
+ieeg_viewLight(v_dL(1),v_dL(2))
 
-% h=colorbar;
-% limits = h.Limits;
-% h.Ticks = limits(1):(limits(2)-limits(1))/10:limits(2);
-% h.TickLabels = {'0','0.1','0.2','0.3','0.4','0.5','0.6','0.7','0.8','0.9','1'}; 
-% 
 % title('Jaccard similarity coefficient')
 
 figureName = sprintf('%s/fig2_brainL_Jaccard',...
@@ -371,49 +306,35 @@ figureName = sprintf('%s/fig2_brainL_Jaccard',...
 
 set(gcf,'PaperPositionMode','auto')
 print('-dpng','-r300',figureName)
-% print('-painters','-depsc',figureName)
 
 fprintf('Figure is saved as .png in \n %s \n',figureName)
 
+% housekeeping
+clear ans cmapnum elec figureName
 
 %% Plot figure with right pial with electrodes in mni space
 % and Jaccard index
 
-v_d = [96 6];
-
 figure
-gr.faces = Rmnipial_face+1;
-gr.vertices = Rmnipial_vert;
-gr = gifti(gr);
-tH = ieeg_RenderGifti(gr); 
-
-% make sure electrodes pop out
-a_offset = .1*max(abs(allmni_coords(:,1)))*[cosd(v_d(1)-90)*cosd(v_d(2)) sind(v_d(1)-90)*cosd(v_d(2)) sind(v_d(2))];
-els = allmni_coords+repmat(a_offset,size(allmni_coords,1),1);      
+ieeg_RenderGifti(gR); 
 
 hold on
-for elec = 1:size(els,1)
+for elec = 1:size(all_elecRview,1)
     if strcmpi(all_hemi(elec),'R')
 
         cmapnum = round(all_Jaccard(elec)*100)+1;
-        plot3(els(elec,1), els(elec,2),els(elec,3),...
-            '.','Color',cmap(cmapnum,:),'MarkerSize',20);
+        plot3(all_elecRview(elec,1), all_elecRview(elec,2),all_elecRview(elec,3),...
+            '.','Color',cmap(cmapnum,:),'MarkerSize',mkrsz);
 
     end
 end
 
-plot3(els(ismember(all_hemi,'R') & all_IED==1,1), ...
-    els(ismember(all_hemi,'R') & all_IED==1,2), ...
-    els(ismember(all_hemi,'R') & all_IED==1,3), ...
-    '.','Color', [240/256, 240/256, 240/256],'MarkerSize',7)
+plot3(all_elecRview(ismember(all_hemi,'R') & all_IED==1,1), ...
+    all_elecRview(ismember(all_hemi,'R') & all_IED==1,2), ...
+    all_elecRview(ismember(all_hemi,'R') & all_IED==1,3), ...
+    '.','Color', [240/256, 240/256, 240/256],'MarkerSize',0.4*mkrsz)
 
-% set(tH,'FaceAlpha',.5) % make transparent
-ieeg_viewLight(v_d(1),v_d(2))
-
-% h=colorbar;
-% limits = h.Limits;
-% h.Ticks = limits(1):(limits(2)-limits(1))/10:limits(2);
-% h.TickLabels = {'0','0.1','0.2','0.3','0.4','0.5','0.6','0.7','0.8','0.9','1'}; %NOG IETS AANPASSEN!!
+ieeg_viewLight(v_dR(1),v_dR(2))
 
 % title('Jaccard similarity coefficient')
 
@@ -422,9 +343,12 @@ figureName = sprintf('%s/fig2_brainR_Jaccard',...
 
 set(gcf,'PaperPositionMode','auto')
 print('-dpng','-r300',figureName)
-% print('-painters','-depsc',figureName)
 
 fprintf('Figure is saved as .png in \n %s \n',figureName)
+
+% housekeeping
+clear ans cmapnum elec figureName
+
 
 %% plot colorbar
 figure,
@@ -442,5 +366,7 @@ print('-painters','-depsc',figureName)
 
 fprintf('Figure is saved as .png and .eps in \n %s \n',figureName)
 
-
-
+% housekeeping
+clear a_offsetLview a_offsetRview all_CCEPnormelec all_elecLview all_elecRview
+clear all_ERSPnormelec all_hemi all_IED all_Jaccard all_mnicoords figureName gL
+clear gR h limits mkrsz v_dL v_dR
