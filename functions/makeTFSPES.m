@@ -4,16 +4,20 @@
 % made BIDS compatible by: Dorien van Blooijs
 % date: July 2019
 
+% this function uses the epoched SPES-data and calculates the Event-Related
+% Spectral Perturbation plot.
+
 function dataBase = makeTFSPES(dataBase,myDataPath,cfg)
 
-for subj = 1:size(dataBase,2)
-    fs = dataBase(subj).ccep_header.Fs;
+for nSubj = 1:size(dataBase,2)
+
+    fs = dataBase(nSubj).ccep_header.Fs;
     
     % used rereferenced or not rereferenced data
     if cfg.reref == 1
-        cc_epoch_sorted = dataBase(subj).cc_epoch_sorted_reref;
+        cc_epoch_sorted = dataBase(nSubj).cc_epoch_sorted_reref;
     else
-        cc_epoch_sorted = dataBase(subj).cc_epoch_sorted;
+        cc_epoch_sorted = dataBase(nSubj).cc_epoch_sorted;
     end
 
     % pre-allocation
@@ -22,10 +26,10 @@ for subj = 1:size(dataBase,2)
     del_stimp = zeros(size(cc_epoch_sorted,3),1);
     
     %% Choose stimulation from specific electrode
-    for stimp=1:size(cc_epoch_sorted,3) % number for stim pair
-        for chan = 1:size(cc_epoch_sorted,1) % number for recording electrode
+    for nStimp=1:size(cc_epoch_sorted,3) % number for stim pair
+        for nChan = 1:size(cc_epoch_sorted,1) % number for recording electrode
             
-            tmpsig = squeeze(cc_epoch_sorted(chan,:,stimp,:));
+            tmpsig = squeeze(cc_epoch_sorted(nChan,:,nStimp,:));
             tmpsig=tmpsig(:,round(fs):round(3*fs)-1);                                             % get 2 seconds (1sec before stim,1 sec after)
             
             if ~any(isnan(tmpsig(:))) % only run ERSP if there are 10 stimuli, no less
@@ -46,27 +50,25 @@ for subj = 1:size(dataBase,2)
                 pointrange = pointrange1:pointrange2;
                 
                 chlabel = sprintf('TF-SPES stim %s-%s response %s',...
-                    dataBase(subj).cc_stimchans{stimp,1},dataBase(subj).cc_stimchans{stimp,2},...
-                    dataBase(subj).ch{chan});
+                    dataBase(nSubj).cc_stimchans{nStimp,1},dataBase(nSubj).cc_stimchans{nStimp,2},...
+                    dataBase(nSubj).ch{nChan});
                 
-                % Michelle used gjnewtimef but the results are equal so I choose to use newtimef
-                %             [ERSPgj,~,powbasegj,timesgj,freqsgj,erspbootgj,~]=gjnewtimef(tmpsig(:,:),length(pointrange),[tlimits(1) tlimits(2)],EEG.srate,cycles,'type','coher','title',chlabel, 'padratio',4,...
-                %                 'plotphase','off','freqs',frange,'plotitc','off','newfig','off','erspmax',15','alpha',0.05,'baseline',[-1000 -100]); % change alpha number to NaN to turn bootstrapping off
-                [ERSP,~,~,times,freqs,erspboot,~]=newtimef(tmpsig(:,:),length(pointrange),[tlimits(1) tlimits(2)],EEG.srate,cfg.cycles,'type','coher','title',chlabel, 'padratio',4,...
+                [ERSP,~,~,times,freqs,erspboot,~] = newtimef(tmpsig(:,:),length(pointrange),[tlimits(1) tlimits(2)],EEG.srate,cfg.cycles,'type','coher','title',chlabel, 'padratio',4,...
                     'plotphase','off','freqs',frange,'plotitc','off','newfig','off','erspmax',15,'alpha',cfg.alpha,'baseline',[-1000 -100]); % change alpha number to NaN to turn bootstrapping off
                 
                 figsize
                 
-                outlabel=sprintf('Stimpair%s-%s_Response%s.jpg',...
-                    dataBase(subj).cc_stimchans{stimp,1},dataBase(subj).cc_stimchans{stimp,2},dataBase(subj).ch{chan});
+                outlabel = sprintf('Stimpair%s-%s_Response%s.jpg',...
+                    dataBase(nSubj).cc_stimchans{nStimp,1},dataBase(nSubj).cc_stimchans{nStimp,2},dataBase(nSubj).ch{nChan});
                 
                 if strcmp(cfg.saveERSP,'yes')
                     % Create a name for a subfolder within output
-                    output = fullfile(myDataPath.ERSPoutput,dataBase(subj).sub_label,dataBase(subj).ses_label,...
-                        dataBase(subj).run_label);
+                    output = fullfile(myDataPath.proj_diroutput,'ERSP',dataBase(nSubj).sub_label,dataBase(nSubj).ses_label,...
+                        dataBase(nSubj).run_label);
                     
                     newSubFolder = sprintf('%s/Stimpair%s-%s/', output,...
-                        dataBase(subj).cc_stimchans{stimp,1},dataBase(subj).cc_stimchans{stimp,2});
+                        dataBase(nSubj).cc_stimchans{nStimp,1},dataBase(nSubj).cc_stimchans{nStimp,2});
+                    
                     % Create the folder if it doesn't exist already.
                     if ~exist(newSubFolder, 'dir')
                         mkdir(newSubFolder);
@@ -80,16 +82,16 @@ for subj = 1:size(dataBase,2)
                 ERSP_boot = ERSP;
                 ERSP_boot(ERSP>erspboot(:,1) & ERSP<erspboot(:,2)) = 0;
                 
-                allERSP{stimp,chan} = ERSP;
-                allERSPboot{stimp,chan} = ERSP_boot;
+                allERSP{nStimp,nChan} = ERSP;
+                allERSPboot{nStimp,nChan} = ERSP_boot;
                 
                 clear ERSP
                 
             else
-                del_stimp(stimp) = 1;
+                del_stimp(nStimp) = 1;
                 
-                allERSPboot{stimp,chan} = [];                
-                allERSP{stimp,chan} = [];                
+                allERSPboot{nStimp,nChan} = [];                
+                allERSP{nStimp,nChan} = [];                
             end
         end
         
@@ -99,18 +101,18 @@ for subj = 1:size(dataBase,2)
             allERSP = allERSP(~del_stimp,:);
             
             targetFolder = output;
-            fileName=['/' dataBase(subj).sub_label,'_' dataBase(subj).ses_label,...
-                '_', dataBase(subj).task_label,'_',dataBase(subj).run_label '_ERSP.mat'];
-            cc_stimchans = dataBase(subj).cc_stimchans(~del_stimp,:);
-            cc_stimsets = dataBase(subj).cc_stimsets(~del_stimp,:);
-            ch = dataBase(subj).ch;
+            fileName = [dataBase(nSubj).sub_label,'_' dataBase(nSubj).ses_label,...
+                '_', dataBase(nSubj).task_label,'_',dataBase(nSubj).run_label '_ERSP.mat'];
+            cc_stimchans = dataBase(nSubj).cc_stimchans(~del_stimp,:);
+            cc_stimsets = dataBase(nSubj).cc_stimsets(~del_stimp,:);
+            ch = dataBase(nSubj).ch;
             
-            save([targetFolder,fileName], '-v7.3','allERSP', 'allERSPboot','times','freqs','cc_stimchans','cc_stimsets','ch','cfg');
+            save(fullfile(targetFolder,fileName), '-v7.3','allERSP', 'allERSPboot','times','freqs','cc_stimchans','cc_stimsets','ch','cfg');
         end
         
-        dataBase(subj).allERSP = allERSP;
-        dataBase(subj).allERSPboot = allERSPboot;
-        dataBase(subj).times = times;
-        dataBase(subj).freqs = freqs;
+        dataBase(nSubj).allERSP = allERSP;
+        dataBase(nSubj).allERSPboot = allERSPboot;
+        dataBase(nSubj).times = times;
+        dataBase(nSubj).freqs = freqs;
     end
 end

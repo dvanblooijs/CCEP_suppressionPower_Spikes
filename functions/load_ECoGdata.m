@@ -4,46 +4,19 @@
 
 function dataBase = load_ECoGdata(myDataPath,cfg)
 
-dataPath = myDataPath.dataPath;
+dataPath = myDataPath.proj_dirinput;
 dataBase = struct([]);
 
-for subj = 1:size(cfg,2)
-    sub_label = cfg(subj).sub_labels;
-    ses_label = cfg(subj).ses_label;
-    task_label = cfg(subj).task_label;
-
-    if isfield(cfg,'run_label')
-        if size(cfg(subj).run_label{1},2)>4 % if label is more than run-
-            run_label = cfg(subj).run_label{1};
-        else
-            run_label = {'run-*'};
-        end
-    else
-        run_label = {'run-*'};
-    end
-
+for nSubj = 1:size(cfg,2)
+    sub_label = cfg(nSubj).sub_labels;
+    ses_label = cfg(nSubj).ses_label;
+    task_label = cfg(nSubj).task_label;
+    run_label = cfg(nSubj).run_label{1};
 
     D = dir(fullfile(dataPath,sub_label,ses_label,'ieeg',...
         [sub_label '_' ses_label '_' task_label ,'_',run_label, '_ieeg.eeg']));
-
-    if size(D,1) == 0
-        error('%s does not exist',fullfile(dataPath,sub_label, ses_label,'ieeg',...
-            [sub_label '_' ses_label '_' task_label ,'_',run_label, '_ieeg.eeg']))
-    end
-
-    % determine run_label
-    if ~isfield(cfg,'run_label') || size(cfg(subj).run_label{1},2)<=4
-        if size(D,1) == 1
-            run_label = D(1).name(strfind(D(1).name,'run-'):strfind(D(1).name,'_ieeg')-1);
-        else
-            run_label = D(1).name(strfind(D(1).name,'run-'):strfind(D(1).name,'_ieeg')-1);
-            fprintf('WARNING: More runs were available for %s_%s_%s, so determine run_label! \n',sub_label,ses_label,task_label)
-        end
-
-        dataName = fullfile(D(1).folder, D(1).name);
-    else
-        dataName = fullfile(D(1).folder, D(1).name);
-    end
+   
+    dataName = fullfile(D(1).folder, D(1).name);
 
     ccep_data = ft_read_data(dataName,'dataformat','brainvision_eeg');
     ccep_header = ft_read_header(dataName);
@@ -80,17 +53,17 @@ for subj = 1:size(cfg,2)
 
     data = ccep_data(idx_ch_incl,:);
 
-    dataBase(subj).sub_label = sub_label;
-    dataBase(subj).ses_label = ses_label;
-    dataBase(subj).task_label = task_label;
-    dataBase(subj).run_label = run_label;
-    dataBase(subj).dataName = dataName;
-    dataBase(subj).ccep_header = ccep_header;
-    dataBase(subj).tb_events = tb_events;
-    dataBase(subj).tb_channels = tb_channels;
-    dataBase(subj).tb_electrodes = tb_electrodes;
-    dataBase(subj).ch = ch_incl;
-    dataBase(subj).data = data;
+    dataBase(nSubj).sub_label = sub_label;
+    dataBase(nSubj).ses_label = ses_label;
+    dataBase(nSubj).task_label = task_label;
+    dataBase(nSubj).run_label = run_label;
+    dataBase(nSubj).dataName = dataName;
+    dataBase(nSubj).ccep_header = ccep_header;
+    dataBase(nSubj).tb_events = tb_events;
+    dataBase(nSubj).tb_channels = tb_channels;
+    dataBase(nSubj).tb_electrodes = tb_electrodes;
+    dataBase(nSubj).ch = ch_incl;
+    dataBase(nSubj).data = data;
     fprintf('...Subject %s has been run...\n',sub_label)
 end
 

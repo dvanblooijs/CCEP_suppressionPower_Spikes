@@ -1,7 +1,8 @@
 function dataBase = visualRating_tfspes(dataBase,subj,lookPic, myDataPath,endstimp)
 %%
 if ~isempty(myDataPath)
-    filefolder = fullfile(myDataPath.ERSPoutput,dataBase(subj).sub_label,dataBase(subj).ses_label,dataBase(subj).run_label);
+    filefolder = fullfile(myDataPath.proj_diroutput,'ERSP',dataBase(subj).sub_label,dataBase(subj).ses_label,dataBase(subj).run_label);
+    
     if ~exist(filefolder,'dir')
         mkdir(filefolder)
     end
@@ -20,11 +21,6 @@ t(2) = find(times>0,1,'first');
 
 ERSPdet = dataBase(subj).ERSPdet;
 
-% ERSPdet.cc_stimchans = dataBase(subj).ERSP.cc_stimchans;
-% ERSPdet.cc_stimsets = dataBase(subj).ERSP.cc_stimsets;
-% ERSPdet.ch = dataBase(subj).ERSP.ch;
-
-
 % if no ERSPs are checked
 if sum(strcmp(fieldnames(dataBase(subj)),'ERSPdet'))==0
     ERSPdet.checked = zeros(size(dataBase(subj).ERSP.allERSPboot));
@@ -34,11 +30,11 @@ end
 
 n=numel(ERSPdet.detected(1:endstimp,:))+1;
 
-for stimp = endstimp+1:size(dataBase(subj).ERSP.allERSPboot,1)
-    for chan = 1:size(dataBase(subj).ERSP.allERSPboot,2)
+for nStimp = endstimp+1:size(dataBase(subj).ERSP.allERSPboot,1)
+    for nChan = 1:size(dataBase(subj).ERSP.allERSPboot,2)
         
-        if ~ismember(chan,dataBase(subj).ERSP.cc_stimsets(stimp,:)) && lookPic(stimp,chan)==1 % && detected(stimp,chan) == 1
-            [fig1,  axes1] = plot_ERSP(dataBase(subj).ERSP,stimp,chan);
+        if ~ismember(nChan,dataBase(subj).ERSP.cc_stimsets(nStimp,:)) && lookPic(nStimp,nChan)==1 % && detected(stimp,chan) == 1
+            [fig1,  axes1] = plot_ERSP(dataBase(subj).ERSP,nStimp,nChan);
             figchild = 0;
             alreadyClicked = 0;
             hold on
@@ -48,24 +44,24 @@ for stimp = endstimp+1:size(dataBase(subj).ERSP.allERSPboot,1)
             if isfield(dataBase(subj).ERSPdet, 'Area')
                 
                 for win=1:2
-                    if dataBase(subj).ERSPdet.Area{win}(stimp,chan) >0
+                    if dataBase(subj).ERSPdet.Area{win}(nStimp,nChan) >0
                         pixelWidth = (times(end)-times(1))/(size(times,2)-1);
                         pixelHeigth = (freqs(end)-freqs(1))/(size(freqs,2)-1);
                         
                         % plot bounding box on largest power suppression
-                        if dataBase(subj).ERSPdet.tStart{win}(stimp,chan) > 0.5
-                            x1 = (times(floor(dataBase(subj).ERSPdet.tStart{win}(stimp,chan)+t(win)-1)) + times(ceil(dataBase(subj).ERSPdet.tStart{win}(stimp,chan)+t(win)-1)))/2;
+                        if dataBase(subj).ERSPdet.tStart{win}(nStimp,nChan) > 0.5
+                            x1 = (times(floor(dataBase(subj).ERSPdet.tStart{win}(nStimp,nChan)+t(win)-1)) + times(ceil(dataBase(subj).ERSPdet.tStart{win}(nStimp,nChan)+t(win)-1)))/2;
                         else
                             x1 = times(t(win))-0.5*pixelWidth;
                         end
                         
-                        if dataBase(subj).ERSPdet.fStart{win}(stimp,chan) > 0.5
-                            y1 = (freqs(floor(dataBase(subj).ERSPdet.fStart{win}(stimp,chan))) + freqs(ceil(dataBase(subj).ERSPdet.fStart{win}(stimp,chan))))/2;
+                        if dataBase(subj).ERSPdet.fStart{win}(nStimp,nChan) > 0.5
+                            y1 = (freqs(floor(dataBase(subj).ERSPdet.fStart{win}(nStimp,nChan))) + freqs(ceil(dataBase(subj).ERSPdet.fStart{win}(nStimp,nChan))))/2;
                         else
                             y1 = freqs(1)-0.5*pixelHeigth;
                         end
-                        wdth = dataBase(subj).ERSPdet.tWidth{win}(stimp,chan)*pixelWidth;
-                        h = dataBase(subj).ERSPdet.fWidth{win}(stimp,chan)*pixelHeigth;
+                        wdth = dataBase(subj).ERSPdet.tWidth{win}(nStimp,nChan)*pixelWidth;
+                        h = dataBase(subj).ERSPdet.fWidth{win}(nStimp,nChan)*pixelHeigth;
                         
                         rectangle('Parent',axes1,'Position',[x1 y1 wdth h],'EdgeColor',C);
                         figchild = figchild +1;
@@ -76,13 +72,13 @@ for stimp = endstimp+1:size(dataBase(subj).ERSP.allERSPboot,1)
             perc = n / size(dataBase(subj).ERSP.allERSPboot(:),1) *100;
             
             s = input(sprintf('%2.1f %% %s --- stimpair = %s-%s chan = %s --- Do you observe power suppression (y/n) and correct detection (y/yn)? [y/yn/n]: ',...
-                perc,dataBase(subj).sub_label, dataBase(subj).ERSP.cc_stimchans{stimp,:},dataBase(subj).ERSP.ch{chan}),'s');
+                perc,dataBase(subj).sub_label, dataBase(subj).ERSP.cc_stimchans{nStimp,:},dataBase(subj).ERSP.ch{nChan}),'s');
             
             if strcmp(s,'yn') || strcmp(s,'cyn')
-                tStart = dataBase(subj).ERSPdet.statsPost{stimp,chan}(:,1);
-                fStart = dataBase(subj).ERSPdet.statsPost{stimp,chan}(:,2);
-                tWidth = dataBase(subj).ERSPdet.statsPost{stimp,chan}(:,3);
-                fWidth = dataBase(subj).ERSPdet.statsPost{stimp,chan}(:,4);
+                tStart = dataBase(subj).ERSPdet.statsPost{nStimp,nChan}(:,1);
+                fStart = dataBase(subj).ERSPdet.statsPost{nStimp,nChan}(:,2);
+                tWidth = dataBase(subj).ERSPdet.statsPost{nStimp,nChan}(:,3);
+                fWidth = dataBase(subj).ERSPdet.statsPost{nStimp,nChan}(:,4);
                 
                 % plot bounding box on all power suppression
                 x1 = zeros(size(tStart)); y1 = zeros(size(tStart));
@@ -140,32 +136,32 @@ for stimp = endstimp+1:size(dataBase(subj).ERSP.allERSPboot,1)
                     end
                 end
                 
-                ERSPdet.checked(stimp,chan) = 1;
+                ERSPdet.checked(nStimp,nChan) = 1;
                 
                 fprintf('Selection was: tStart = %3.1fsamples, fStart = %3.1fsamples, tWidth = %3.1fsamples, fWidth = %3.1fsamples \n',...
-                    dataBase(subj).ERSPdet.tStart{2}(stimp,chan), ...
-                    dataBase(subj).ERSPdet.fStart{2}(stimp,chan), ...
-                    dataBase(subj).ERSPdet.tWidth{2}(stimp,chan),...
-                    dataBase(subj).ERSPdet.fWidth{2}(stimp,chan))
+                    dataBase(subj).ERSPdet.tStart{2}(nStimp,nChan), ...
+                    dataBase(subj).ERSPdet.fStart{2}(nStimp,nChan), ...
+                    dataBase(subj).ERSPdet.tWidth{2}(nStimp,nChan),...
+                    dataBase(subj).ERSPdet.fWidth{2}(nStimp,nChan))
                 
                 % update the features of this blue blobs in case the wrong
                 % selection was made
-                dataBase(subj).ERSPdet.tStart{2}(stimp,chan) = tStart(idx);
-                dataBase(subj).ERSPdet.fStart{2}(stimp,chan) = fStart(idx);
-                dataBase(subj).ERSPdet.tWidth{2}(stimp,chan) = tWidth(idx);
-                dataBase(subj).ERSPdet.fWidth{2}(stimp,chan) = fWidth(idx);
+                dataBase(subj).ERSPdet.tStart{2}(nStimp,nChan) = tStart(idx);
+                dataBase(subj).ERSPdet.fStart{2}(nStimp,nChan) = fStart(idx);
+                dataBase(subj).ERSPdet.tWidth{2}(nStimp,nChan) = tWidth(idx);
+                dataBase(subj).ERSPdet.fWidth{2}(nStimp,nChan) = fWidth(idx);
                 
                 fprintf('Selection is now saved as: tStart = %3.1fsamples, fStart = %3.1fsamples, tWidth = %3.1fsamples, fWidth = %3.1fsamples \n \n',...
-                    dataBase(subj).ERSPdet.tStart{2}(stimp,chan), ...
-                    dataBase(subj).ERSPdet.fStart{2}(stimp,chan), ...
-                    dataBase(subj).ERSPdet.tWidth{2}(stimp,chan),...
-                    dataBase(subj).ERSPdet.fWidth{2}(stimp,chan))
+                    dataBase(subj).ERSPdet.tStart{2}(nStimp,nChan), ...
+                    dataBase(subj).ERSPdet.fStart{2}(nStimp,nChan), ...
+                    dataBase(subj).ERSPdet.tWidth{2}(nStimp,nChan),...
+                    dataBase(subj).ERSPdet.fWidth{2}(nStimp,nChan))
                 
             elseif strcmp(s,'y') || strcmp(s,'cy')
-                ERSPdet.checked(stimp,chan) = 1;
+                ERSPdet.checked(nStimp,nChan) = 1;
                 
             else
-                ERSPdet.checked(stimp,chan) = 0;
+                ERSPdet.checked(nStimp,nChan) = 0;
                 
             end
             close(fig1)
@@ -175,7 +171,7 @@ for stimp = endstimp+1:size(dataBase(subj).ERSP.allERSPboot,1)
     end
     
     % save also till which stimpair visual ERSPS were checked.
-    ERSPdet.checkUntilStimp = stimp;
+    ERSPdet.checkUntilStimp = nStimp;
     
     if save_check == 1
         filename = [dataBase(subj).sub_label,'_',dataBase(subj).ses_label,'_',dataBase(subj).task_label,'_',dataBase(subj).run_label,'_ERSPdet.mat'];

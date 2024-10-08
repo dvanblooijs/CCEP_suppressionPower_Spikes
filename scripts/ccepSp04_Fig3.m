@@ -44,17 +44,47 @@ all_spikeratio_log = log(all_spikeratio);
 % between pre and post-stimulation
 all_spikeratio_log(isinf(all_spikeratio_log)) = NaN;
 
-fprintf('Median (normal SR) CCEP = %1.2f\n',...
-    median(all_spikeratio_log(all_CCEPmat ==1),'omitnan'))
-fprintf('Median (normal SR) no CCEP = %1.2f\n',...
-    median(all_spikeratio_log(all_CCEPmat ==0),'omitnan'))
+[f0,x0] = ecdf(all_spikeratio_log(all_CCEPmat ==0));
+q0 = quantile(all_spikeratio_log(all_CCEPmat ==0),[0.25 0.5 0.75]);
+
+[f1,x1] = ecdf(all_spikeratio_log(all_CCEPmat ==1));
+q1 = quantile(all_spikeratio_log(all_CCEPmat ==1),[0.25 0.5 0.75]);
+
+figure(1),
+plot(x1,f1,'Color',cmap(30,:)), hold on, 
+plot(x0,f0,'Color',cmap(1,:))
+plot(q1,[0.25 0.5 0.75],'bo','MarkerFaceColor',cmap(30,:),'MarkerEdgeColor','none')
+plot(q0,[0.25 0.5 0.75],'bo','MarkerFaceColor',cmap(1,:),'MarkerEdgeColor','none')
+legend('CCEP','No CCEP')
+
+xlabel('Logarithmic IED ratio')
+ylabel('Probability')
+
+figureName = sprintf('%s/fig4_SR_CCEP_cdf',...
+    myDataPath.Figures);
+
+set(gcf,'PaperPositionMode','auto')
+print('-dpng','-r300',figureName)
+print('-vector','-depsc',figureName)
+
+fprintf('Figure is saved as .png and .eps in \n %s \n \n',figureName)
+
+[~, pCDF] = kstest2(all_spikeratio_log(all_CCEPmat ==1),all_spikeratio_log(all_CCEPmat ==0));
+
+fprintf('[0.25 Median 0.75] (normal SR) CCEP = %1.2f %1.2f %1.2f\n',...
+    q1)
+fprintf('[0.25 Median 0.75] (normal SR) no CCEP = %1.2f %1.2f %1.2f\n',...
+    q0)
 
 fprintf('Mean (normal SR) CCEP = %1.2f\n',...
     mean(all_spikeratio_log(all_CCEPmat ==1),'omitnan'))
 fprintf('Mean (normal SR) no CCEP = %1.2f\n',...
     mean(all_spikeratio_log(all_CCEPmat ==0),'omitnan'))
 
-fprintf('--- No significance tested ---\n\n')
+fprintf('p = %f \n \n',pCDF)
+
+% housekeeping
+clear f0 x0 q0 f1 x1 q1 pCDF
 
 %% absolute values of spikes
 % statistical test with mann whitney u test
@@ -128,7 +158,6 @@ fprintf('Mean (positive SR) no CCEP = %1.2f\n',...
 
 fprintf('p = %f \n \n',pPos)
 
-
 %% apply FDR correction: p<0.05
 pFDR = 0.05;
 
@@ -153,7 +182,7 @@ pSig(pInd) = pSort < thisVal;
 ymin = min(all_spikeratio_log);
 ymax = max(all_spikeratio_log);
 
-h = figure(1);
+h = figure(2);
 violinplot(all_spikeratio_log,names,'Width',0.3);
 
 h.Units = 'normalized';
@@ -185,7 +214,7 @@ clear figureName h ymax ymin ans ax
 
 ymax = max(all_spikeratio_abs);
 
-h = figure(2);
+h = figure(3);
 violinplot(all_spikeratio_abs,names,'Width',0.3);
 hold on
 
@@ -239,7 +268,7 @@ clear ans ax figureName h ymax
 ymin = min(all_spikeratio_neg);
 ymax = 0.1;
 
-h = figure(3);
+h = figure(4);
 violinplot(all_spikeratio_neg,names,'Width',0.3);
 hold on
 
@@ -292,7 +321,7 @@ clear ans ax figureName h ymax ymin
 ymin = -0.1;
 ymax = max(all_spikeratio_pos);
 
-h = figure(4);
+h = figure(5);
 violinplot(all_spikeratio_pos,names,'Width',0.3);
 hold on
 

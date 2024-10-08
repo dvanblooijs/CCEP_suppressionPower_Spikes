@@ -65,7 +65,8 @@ fprintf('--- No significance tested ---\n\n')
 
 all_spikeratio_abs = abs(log(all_spikeratio));
 
-pAbs = kruskalwallis(all_spikeratio_abs,names,"off");
+[pAbs, tab, stats] = kruskalwallis(all_spikeratio_abs,names,"off");
+[a,b,c,d] = multcompare(stats)
 
 % [pAbs,~] = ranksum(all_spikeratio_abs(all_ERSPmat ==1), all_spikeratio_abs(all_ERSPmat == 0));
 
@@ -99,7 +100,7 @@ fprintf('p = %f \n \n',pAbs)
 all_spikeratio_neg = log(all_spikeratio);
 all_spikeratio_neg(all_spikeratio_neg > 0) = NaN;
 
-pNeg = kruskalwallis(all_spikeratio_neg,names,"off");
+[pNeg,anovatab,stats] = kruskalwallis(all_spikeratio_neg,names,"off");
 
 % [pNeg,~] = ranksum(all_spikeratio_neg(all_ERSPmat ==1), all_spikeratio_neg(all_ERSPmat == 0));
 
@@ -134,7 +135,7 @@ all_spikeratio_pos = log(all_spikeratio);
 all_spikeratio_pos(all_spikeratio_pos<0) = NaN;
 
 % [pPos,~] = ranksum(all_spikeratio_pos(all_ERSPmat ==1), all_spikeratio_pos(all_ERSPmat == 0));
-pPos = kruskalwallis(all_spikeratio_pos,names,"off");
+[pPos, anovatab,stats] = kruskalwallis(all_spikeratio_pos,names,"off");
 
 % exclude the infinite values, because otherwise violinplot cannot be made
 % value Inf is when the ratio=0, which means that there is no difference

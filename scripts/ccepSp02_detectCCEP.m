@@ -2,36 +2,60 @@
 % author: Dorien van Blooijs
 % date: September 2019
 
-clc
+% This script is used to detect CCEPs. 
+% 1. set paths
+% 2. select subjects
+% 3. load ecog data (BIDS)
+% 4. epoch the data in [-2,2] around each single pulse.
+% 5. Detect CCEPs in each averaged epoch
+% 6. Visually check the detected CCEPs. 
+% 7. Save this in N1sChecked.mat
+
+%% set paths
+
 clear
-myDataPath = setLocalDataPath(1);
+close all
+clc
+
+% add current path from folder which contains this script
+rootPath = matlab.desktop.editor.getActiveFilename;
+RepoPath = fileparts(rootPath);
+matlabFolder = strfind(RepoPath,'matlab');
+addpath(genpath(RepoPath(1:matlabFolder+6)));
+
+% set other paths and get paths where data is collected and where
+% derivatives will be saved
+myDataPath = ccepSp_setLocalDataPath(1);
+
+% housekeeping
+clear matlabFolder RepoPath rootPath 
 
 %% patient settings
 
-files = dir(myDataPath.dataPath);
+files = dir(myDataPath.proj_dirinput);
 idx_subj = contains({files(:).name},'sub-');
 files_subj = files(idx_subj);
 cfg = struct([]);
 
-for subj = 1:size(files_subj,1)
+for nSubj = 1:size(files_subj,1)
 
-    cfg(subj).sub_labels = files_subj(subj).name;
+    cfg(nSubj).sub_labels = files_subj(nSubj).name;
 
-    files = dir(fullfile(files_subj(subj).folder,files_subj(subj).name));
+    files = dir(fullfile(files_subj(nSubj).folder,files_subj(nSubj).name));
     idx_ses = contains({files(:).name},'ses-');
     files_ses = files(idx_ses);
 
-    cfg(subj).ses_label = files_ses(1).name;
+    cfg(nSubj).ses_label = files_ses(1).name;
 
-    cfg(subj).task_label = 'task-SPESclin';
+    cfg(nSubj).task_label = 'task-SPESclin';
 
     files = dir(fullfile(files_ses(1).folder,files_ses(1).name,'ieeg'));
     idx_eeg = contains({files(:).name},'.eeg');
     files_eeg = files(idx_eeg);
 
-    for run = 1:size(files_eeg,1)
-        runTemp = extractBetween(files_eeg(run).name,'run-','_ieeg');
-        cfg(subj).run_label{run} = ['run-', runTemp{1}];
+    for nRun = 1:size(files_eeg,1)
+        runTemp = extractBetween(files_eeg(nRun).name,'run-','_ieeg');
+        cfg(nSubj).run_label{nRun} = ['run-', runTemp{1}];
     end
 end
 
@@ -43,10 +67,6 @@ disp('All ECoGs are loaded')
 
 %% preprocessing CCEP in ECoG
 cfg = [];
-
-% sort stimulation pairs
-cfg.dir = 'no'; % if you want to take negative/positive stimulation into account
-cfg.amp = 'no'; % if you want to take stimulation current into account
 
 % select epochs and average
 cfg.epoch_length = 4; % in seconds, -2:2
@@ -72,45 +92,46 @@ close all
 subs = {dataBase(:).sub_label};
 string = [repmat('%s, ',1,size(subs,2)-1), '%s'];
 substring = input(sprintf(['Choose subject: ',string,'\n'],subs{:}),'s');
-subj = find(contains({dataBase(:).sub_label},substring));
+nSubj = find(contains({dataBase(:).sub_label},substring));
     
 % load checked N1s if visual rating has started earlier
-if exist(fullfile(myDataPath.CCEPpath, dataBase(subj).sub_label,dataBase(subj).ses_label,...
-        [dataBase(subj).sub_label, '_', dataBase(subj).ses_label,'_',dataBase(subj).task_label,'_',dataBase(subj).run_label,'_N1sChecked.mat']),'file')
-   dataBase(subj).ccep = load(fullfile(myDataPath.CCEPpath, dataBase(subj).sub_label,dataBase(subj).ses_label,...
-        [dataBase(subj).sub_label, '_', dataBase(subj).ses_label,'_',dataBase(subj).task_label,'_',dataBase(subj).run_label,'_N1sChecked.mat']));   
+if exist(fullfile(myDataPath.proj_diroutput,'CCEPs', dataBase(nSubj).sub_label,dataBase(nSubj).ses_label,...
+        [dataBase(nSubj).sub_label, '_', dataBase(nSubj).ses_label,'_',dataBase(nSubj).task_label,'_',dataBase(nSubj).run_label,'_N1sChecked.mat']),'file')
+
+   dataBase(nSubj).ccep = load(fullfile(myDataPath.proj_diroutput,'CCEPs', dataBase(nSubj).sub_label,dataBase(nSubj).ses_label,...
+        [dataBase(nSubj).sub_label, '_', dataBase(nSubj).ses_label,'_',dataBase(nSubj).task_label,'_',dataBase(nSubj).run_label,'_N1sChecked.mat']));   
 end
 
 % continue with the stimulation pair after the last saved stimulation pair
-if any(contains(fieldnames(dataBase(subj).ccep),'checkUntilStimp'))
-    endstimp = dataBase(subj).ccep.checkUntilStimp;
+if any(contains(fieldnames(dataBase(nSubj).ccep),'checkUntilStimp'))
+    endstimp = dataBase(nSubj).ccep.checkUntilStimp;
 else
     endstimp = 0;
 end
 
-dataBase = visualRating_ccep(myDataPath,dataBase,subj,cfg,endstimp);
+dataBase = visualRating_ccep(myDataPath,dataBase,nSubj,cfg,endstimp);
     
 %% save ccep
 
-for subj = 1:size(dataBase,2)
-    targetFolder = fullfile(myDataPath.CCEPpath, dataBase(subj).sub_label,dataBase(subj).ses_label);
+for nSubj = 1:size(dataBase,2)
+    targetFolder = fullfile(myDataPath.proj_diroutput,'CCEPs', dataBase(nSubj).sub_label,dataBase(nSubj).ses_label);
     
     % Create the folder if it doesn't exist already.
     if ~exist(targetFolder, 'dir')
         mkdir(targetFolder);
     end
     
-    start_filename = strfind(dataBase(subj).dataName,'/');
-    stop_filename = strfind(dataBase(subj).dataName,'_ieeg');
+    start_filename = strfind(dataBase(nSubj).dataName,'/');
+    stop_filename = strfind(dataBase(nSubj).dataName,'_ieeg');
     
-    fileName = [dataBase(subj).dataName(start_filename(end)+1:stop_filename-1),'_N1sChecked.mat'];
+    fileName = [dataBase(nSubj).dataName(start_filename(end)+1:stop_filename-1),'_N1sChecked.mat'];
     
-    ccep = dataBase(subj).ccep;
-    [~,eegFile,eegExt] = fileparts(dataBase(subj).dataName);
+    ccep = dataBase(nSubj).ccep;
+    [~,eegFile,eegExt] = fileparts(dataBase(nSubj).dataName);
     ccep.dataName = [eegFile, eegExt];
-    ccep.ch = dataBase(subj).ch;
-    ccep.cc_stimchans = dataBase(subj).cc_stimchans;
-    ccep.cc_stimsets = dataBase(subj).cc_stimsets;
+    ccep.ch = dataBase(nSubj).ch;
+    ccep.cc_stimchans = dataBase(nSubj).cc_stimchans;
+    ccep.cc_stimsets = dataBase(nSubj).cc_stimsets;
     
     % detection parameters must be described when known!!
     ccep.detpar.amplitude_thresh = cfg.amplitude_thresh;

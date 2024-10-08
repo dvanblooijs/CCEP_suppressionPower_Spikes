@@ -10,37 +10,37 @@ clc
 all_CCEPmat = [];
 all_ERSPmat = [];
 
-for subj = 1:size(dataBase,2)
+for nSubj = 1:size(dataBase,2)
 
-    all_CCEPmat = [all_CCEPmat; dataBase(subj).CCEPmat(:)]; %#ok<AGROW>
-    all_ERSPmat = [all_ERSPmat; dataBase(subj).ERSPmat(:)];  %#ok<AGROW>
+    all_CCEPmat = [all_CCEPmat; dataBase(nSubj).CCEPmat(:)]; 
+    all_ERSPmat = [all_ERSPmat; dataBase(nSubj).ERSPmat(:)]; 
 end
 
 % housekeeping
-clear subj
+clear nSubj
 
 %% calculate odds ratio in all separate subjects
 
 % determine co-occurrence of ccep and ERSP suppression
 clc
 
-for subj = 1:size(dataBase,2)
-    tbl = crosstab(dataBase(subj).CCEPmat(:),dataBase(subj).ERSPmat(:));
+for nSubj = 1:size(dataBase,2)
+    tbl = crosstab(dataBase(nSubj).CCEPmat(:),dataBase(nSubj).ERSPmat(:));
 
     [~,p,stats] = fishertest(tbl);
 
-    dataBase(subj).stat_ccep_ERSP.OR = stats.OddsRatio; %#ok<SAGROW> 
-    dataBase(subj).stat_ccep_ERSP.CI = stats.ConfidenceInterval; %#ok<SAGROW> 
-    dataBase(subj).stat_ccep_ERSP.tbl = tbl; %#ok<SAGROW> 
-    dataBase(subj).stat_ccep_ERSP.p = p;  %#ok<SAGROW> 
+    dataBase(nSubj).stat_ccep_ERSP.OR = stats.OddsRatio; 
+    dataBase(nSubj).stat_ccep_ERSP.CI = stats.ConfidenceInterval; 
+    dataBase(nSubj).stat_ccep_ERSP.tbl = tbl;
+    dataBase(nSubj).stat_ccep_ERSP.p = p;  
 
     fprintf('--- %s: OR = %2.1f, CI = %2.1f-%2.1f, p = %1.10f --- \n',...
-        dataBase(subj).sub_label, stats.OddsRatio, stats.ConfidenceInterval(1), stats.ConfidenceInterval(2) , p)
+        dataBase(nSubj).sub_label, stats.OddsRatio, stats.ConfidenceInterval(1), stats.ConfidenceInterval(2) , p)
 
 end
 
 % housekeeping
-clear stats h p subj tbl
+clear stats h p nSubj tbl
 
 %% calculate odds ratio in all patients combined
 
@@ -61,16 +61,16 @@ fprintf('--- all subjects: OR = %2.1f, CI = %2.1f-%2.1f, p = %1.10f --- \n',...
     stats.OddsRatio, stats.ConfidenceInterval(1), stats.ConfidenceInterval(2) , p)
 
 % housekeeping
-clear stats h p subj tbl
+clear stats h p nSubj tbl
 
 %% apply FDR correction: p<0.001
 pFDR = 0.05;
 
 pVals = NaN(size(dataBase));
-for subj = 1:size(dataBase,2)
-    pVals(subj) = dataBase(subj).stat_ccep_ERSP.p;
+for nSubj = 1:size(dataBase,2)
+    pVals(nSubj) = dataBase(nSubj).stat_ccep_ERSP.p;
 end
-pVals(subj+1) = stat_ccep_ERSP.p;
+pVals(nSubj+1) = stat_ccep_ERSP.p;
 
 [pSort,pInd] = sort(pVals(:));
 
@@ -89,28 +89,20 @@ close all
 maxCI = NaN(size(dataBase,2),1);
 h = figure;
 hold on
-for subj = 1:size(dataBase,2)
-    xline = dataBase(subj).stat_ccep_ERSP.CI(1):0.1:dataBase(subj).stat_ccep_ERSP.CI(2);
+for nSubj = 1:size(dataBase,2)
+    xline = dataBase(nSubj).stat_ccep_ERSP.CI(1):0.1:dataBase(nSubj).stat_ccep_ERSP.CI(2);
 
-    maxCI(subj) = dataBase(subj).stat_ccep_ERSP.CI(2);
-    plot(xline,-subj*ones(size(xline,2),1),'k')
+    maxCI(nSubj) = dataBase(nSubj).stat_ccep_ERSP.CI(2);
+    plot(xline,-nSubj*ones(size(xline,2),1),'k')
 
-    plot(dataBase(subj).stat_ccep_ERSP.OR,-subj,'o','MarkerFaceColor',cmap(50,:),'MarkerEdgeColor',cmap(50,:))
-
-%     if dataBase(subj).stat_ccep_ERSP.p <0.001
-%         p_str = '***';
-%     elseif dataBase(subj).stat_ccep_ERSP.p <0.01 && dataBase(subj).stat_ccep_ERSP.p > 0.001
-%         p_str = '**';
-%     elseif dataBase(subj).stat_ccep_ERSP.p <0.05 && dataBase(subj).stat_ccep_ERSP.p > 0.01
-%         p_str = '*';
-%     end
+    plot(dataBase(nSubj).stat_ccep_ERSP.OR,-nSubj,'o','MarkerFaceColor',cmap(50,:),'MarkerEdgeColor',cmap(50,:))
 
 % FDR corrected p
-    if pSig(subj) == 1
+    if pSig(nSubj) == 1
         p_str = '***';
     end
 
-    text(dataBase(subj).stat_ccep_ERSP.CI(2)+0.5,-subj,p_str)%,'FontSize',8)
+    text(dataBase(nSubj).stat_ccep_ERSP.CI(2)+0.5,-nSubj,p_str)%,'FontSize',8)
 end
 
 % all patients combined
@@ -121,15 +113,8 @@ plot(xline_all,-11*ones(size(xline_all,2),1),'k')
 
 plot(stat_ccep_ERSP.OR,-11,'o','MarkerFaceColor',cmap(30,:),'MarkerEdgeColor',cmap(30,:))
 
-% if stat_ccep_ERSP.p <0.001
-%     p_str = '***';
-% elseif stat_ccep_ERSP.p <0.01 && stat_ccep_ERSP.p > 0.001
-%     p_str = '**';
-% elseif stat_ccep_ERSP.p <0.05 && stat_ccep_ERSP.p > 0.01
-%     p_str = '*';
-% end
-
-if pSig(subj+1)==1
+% FDR corrected [
+if pSig(nSubj+1)==1
     p_str = '***';
 end
 
@@ -152,7 +137,7 @@ h.Units = 'normalized';
 h.Position = [0.6 0.37 0.5 0.5];
 
 figureName = sprintf('%s/fig3_OR',...
-    myDataPath.Figures);
+    myDataPath.figures);
 
 set(gcf,'PaperPositionMode','auto')
 print('-dpng','-r300',figureName)
@@ -162,9 +147,6 @@ fprintf('Figure is saved as .png and .eps in \n %s \n',figureName)
 
 % housekeeping
 clear all_CCEPmat all_ERSPmat ax figureName maxCI maxCI_all p_str 
-clear h subj stat_ccep_ERSP xline xline_all
-
-
-
+clear h nSubj stat_ccep_ERSP xline xline_all
 
 %% end of script

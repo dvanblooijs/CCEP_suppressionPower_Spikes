@@ -4,7 +4,7 @@
 close all
 clc
 
-%% combine spike ratio and CCEPs of all subjects
+%% combine spike ratio and ERSPs of all subjects
 
 all_spikeratio = [];
 all_ERSPmat = [];
@@ -22,7 +22,7 @@ names = cell(size(all_ERSPmat));
 [names{isnan(all_ERSPmat)}] = deal('z');
 
 % housekeeping
-clear subj CCEPmat
+clear subj ERSPmat
 
 %% statistics
 
@@ -34,17 +34,47 @@ all_spikeratio_log = log(all_spikeratio);
 % between pre and post-stimulation
 all_spikeratio_log(isinf(all_spikeratio_log)) = NaN;
 
-fprintf('Median (normal SR) powerSup = %1.2f\n',...
-    median(all_spikeratio_log(all_ERSPmat ==1),'omitnan'))
-fprintf('Median (normal SR) no powerSup = %1.2f\n',...
-    median(all_spikeratio_log(all_ERSPmat ==0),'omitnan'))
+[f0,x0] = ecdf(all_spikeratio_log(all_ERSPmat ==0));
+q0 = quantile(all_spikeratio_log(all_ERSPmat ==0),[0.25 0.5 0.75]);
+
+[f1,x1] = ecdf(all_spikeratio_log(all_ERSPmat ==1));
+q1 = quantile(all_spikeratio_log(all_ERSPmat ==1),[0.25 0.5 0.75]);
+
+figure(6),
+plot(x1,f1,'Color',cmap(30,:)), hold on, 
+plot(x0,f0,'Color',cmap(1,:))
+plot(q1,[0.25 0.5 0.75],'bo','MarkerFaceColor',cmap(30,:),'MarkerEdgeColor','none')
+plot(q0,[0.25 0.5 0.75],'bo','MarkerFaceColor',cmap(1,:),'MarkerEdgeColor','none')
+legend('Power suppression','No power suppression')
+
+xlabel('Logarithmic IED ratio')
+ylabel('Probability')
+
+figureName = sprintf('%s/fig5_SR_powerSup_cdf',...
+    myDataPath.Figures);
+
+set(gcf,'PaperPositionMode','auto')
+print('-dpng','-r300',figureName)
+print('-vector','-depsc',figureName)
+
+fprintf('Figure is saved as .png and .eps in \n %s \n \n',figureName)
+
+[~, pCDF] = kstest2(all_spikeratio_log(all_ERSPmat ==1),all_spikeratio_log(all_ERSPmat ==0));
+
+fprintf('[0.25 Median 0.75] (normal SR) powerSup = %1.2f %1.2f %1.2f\n',...
+    q1)
+fprintf('[0.25 Median 0.75] (normal SR) no powerSup = %1.2f %1.2f %1.2f\n',...
+    q0)
 
 fprintf('Mean (normal SR) powerSup = %1.2f\n',...
     mean(all_spikeratio_log(all_ERSPmat ==1),'omitnan'))
 fprintf('Mean (normal SR) no powerSup = %1.2f\n',...
     mean(all_spikeratio_log(all_ERSPmat ==0),'omitnan'))
 
-fprintf('--- No significance tested ---\n\n')
+fprintf('p = %f \n \n',pCDF)
+
+% housekeeping
+clear f0 x0 q0 f1 x1 q1 pCDF
 
 %% absolute values of spikes
 
@@ -141,7 +171,7 @@ pSig(pInd) = pSort < thisVal;
 ymin = min(all_spikeratio_log);
 ymax = max(all_spikeratio_log);
 
-h = figure(5);
+h = figure(7);
 violinplot(all_spikeratio_log,names,'Width',0.3);
 
 h.Units = 'normalized';
@@ -174,7 +204,7 @@ clear figureName h ymax ymin ans ax
 
 ymax = max(all_spikeratio_abs);
 
-h = figure(6);
+h = figure(8);
 violinplot(all_spikeratio_abs,names,'Width',0.3);
 hold on
 
@@ -227,7 +257,7 @@ clear ans ax figureName h ymax
 ymin = min(all_spikeratio_neg);
 ymax = 0.1;
 
-h = figure(7);
+h = figure(9);
 violinplot(all_spikeratio_neg,names,'Width',0.3);
 hold on
 
@@ -280,7 +310,7 @@ clear ans ax figureName h p ymax ymin
 ymin = -0.1;
 ymax = max(all_spikeratio_pos);
 
-h = figure(8);
+h = figure(10);
 violinplot(all_spikeratio_pos,names,'Width',0.3);
 hold on
 

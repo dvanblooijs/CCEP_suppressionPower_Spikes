@@ -8,37 +8,37 @@ clc
 
 %% add electrodes.tsv
 
-for subj = 1:size(dataBase,2)
+for nSubj = 1:size(dataBase,2)
     
     % convert electrode positions into a matrix
-    if iscell(dataBase(subj).tb_electrodes.x)
+    if iscell(dataBase(nSubj).tb_electrodes.x)
     
-        elecmatrix = NaN(size(dataBase(subj).tb_electrodes,1),3);
-        for ll = 1:size(dataBase(subj).tb_electrodes,1)
-            if ~isequal(dataBase(subj).tb_electrodes.x{ll},'n/a')
-                elecmatrix(ll,:) = [str2double(dataBase(subj).tb_electrodes.x{ll}), ...
-                    str2double(dataBase(subj).tb_electrodes.y{ll}),...
-                    str2double(dataBase(subj).tb_electrodes.z{ll})];
+        elecmatrix = NaN(size(dataBase(nSubj).tb_electrodes,1),3);
+        for ll = 1:size(dataBase(nSubj).tb_electrodes,1)
+            if ~isequal(dataBase(nSubj).tb_electrodes.x{ll},'n/a')
+                elecmatrix(ll,:) = [str2double(dataBase(nSubj).tb_electrodes.x{ll}), ...
+                    str2double(dataBase(nSubj).tb_electrodes.y{ll}),...
+                    str2double(dataBase(nSubj).tb_electrodes.z{ll})];
             end
         end
     else
         
-        elecmatrix = [dataBase(subj).tb_electrodes.x,...
-            dataBase(subj).tb_electrodes.y,...
-            dataBase(subj).tb_electrodes.z];
+        elecmatrix = [dataBase(nSubj).tb_electrodes.x,...
+            dataBase(nSubj).tb_electrodes.y,...
+            dataBase(nSubj).tb_electrodes.z];
     end
     
-    dataBase(subj).elecmatrix = elecmatrix; %#ok<SAGROW> 
+    dataBase(nSubj).elecmatrix = elecmatrix; %#ok<SAGROW> 
 end
 
 disp('All electrodes positions are converted to a matrix.')
 
 % housekeeping
-clear elecmatrix ll subj
+clear elecmatrix ll nSubj
 
 %% load mni305 pial
 % Freesurfer subjects directory
-FSsubjectsdir = fullfile(myDataPath.dataPath,'derivatives','freesurfer');
+FSsubjectsdir = fullfile(myDataPath.proj_diroutput,'freesurfer');
 
 % load mni305 pial
 [Lmnipial_vert,Lmnipial_face] = read_surf(fullfile(FSsubjectsdir,'fsaverage','surf','lh.pial'));
@@ -51,19 +51,19 @@ clear FSsubjectsdir
 
 close all
 
-subj = 8; % in Fig1A of the article number 8 is used
+nSubj = 8; % in Fig1A of the article number 8 is used
 mkrsz = 30;
 
 % get electrodes info
-elCoords = dataBase(subj).elecmatrix;
+elCoords = dataBase(nSubj).elecmatrix;
 
 % get hemisphere for each electrode
-hemi = dataBase(subj).tb_electrodes.hemisphere;
+hemi = dataBase(nSubj).tb_electrodes.hemisphere;
 
-if any(contains(fieldnames(dataBase(subj).tb_electrodes),'ied'))
-    IEDelec = strcmp(dataBase(subj).tb_electrodes.ied,'yes');
+if any(contains(fieldnames(dataBase(nSubj).tb_electrodes),'ied'))
+    IEDelec = strcmp(dataBase(nSubj).tb_electrodes.ied,'yes');
 else
-    IEDelec = false(size(dataBase(subj).tb_electrodes,1),1);
+    IEDelec = false(size(dataBase(nSubj).tb_electrodes,1),1);
 end
 
 % set the view for the correct hemisphere
@@ -93,8 +93,8 @@ plot3(els(:,1), ...
     '.','Color', 'k','MarkerSize',mkrsz)
 
 % stimulated and response electrode:
-stimelec = contains(dataBase(subj).tb_electrodes.name,{'C23','C24'});
-respelec = contains(dataBase(subj).tb_electrodes.name,'C16');
+stimelec = contains(dataBase(nSubj).tb_electrodes.name,{'C23','C24'});
+respelec = contains(dataBase(nSubj).tb_electrodes.name,'C16');
 plot3(els(stimelec==1,1), els(stimelec==1,2), els(stimelec==1,3), ...
     '.','Color', [184/256, 26/256, 93/256],'MarkerSize',0.8*mkrsz)
 plot3(els(respelec==1,1), els(respelec==1,2), els(respelec==1,3), ...
@@ -111,7 +111,7 @@ hold off
 ieeg_viewLight(v_d(1),v_d(2))
 
 figureName = sprintf('%s/fig1a_brain_%s',...
-    myDataPath.Figures,dataBase(subj).sub_label);
+    myDataPath.figures,dataBase(nSubj).sub_label);
 
 set(gcf,'PaperPositionMode','auto')
 print('-dpng','-r300',figureName)
@@ -120,6 +120,6 @@ fprintf('Figure is saved as .png in \n %s \n',figureName)
 
 % housekeeping
 clear a_offset ans elCoords els figureName g hemi IEDelec Lmnipial_face 
-clear Lmnipial_vert mkrsz respelec Rmnipial_face Rmnipial_vert subj v_d stimelec
+clear Lmnipial_vert mkrsz respelec Rmnipial_face Rmnipial_vert nSubj v_d stimelec
 
 %% end of script
