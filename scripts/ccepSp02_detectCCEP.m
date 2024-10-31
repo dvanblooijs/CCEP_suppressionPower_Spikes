@@ -95,10 +95,10 @@ substring = input(sprintf(['Choose subject: ',string,'\n'],subs{:}),'s');
 nSubj = find(contains({dataBase(:).sub_label},substring));
     
 % load checked N1s if visual rating has started earlier
-if exist(fullfile(myDataPath.proj_diroutput,'CCEPs', dataBase(nSubj).sub_label,dataBase(nSubj).ses_label,...
+if exist(fullfile(myDataPath.proj_diroutput,dataBase(nSubj).sub_label,...
         [dataBase(nSubj).sub_label, '_', dataBase(nSubj).ses_label,'_',dataBase(nSubj).task_label,'_',dataBase(nSubj).run_label,'_N1sChecked.mat']),'file')
 
-   dataBase(nSubj).ccep = load(fullfile(myDataPath.proj_diroutput,'CCEPs', dataBase(nSubj).sub_label,dataBase(nSubj).ses_label,...
+   dataBase(nSubj).ccep = load(fullfile(myDataPath.proj_diroutput,dataBase(nSubj).sub_label,...
         [dataBase(nSubj).sub_label, '_', dataBase(nSubj).ses_label,'_',dataBase(nSubj).task_label,'_',dataBase(nSubj).run_label,'_N1sChecked.mat']));   
 end
 
@@ -114,7 +114,7 @@ dataBase = visualRating_ccep(myDataPath,dataBase,nSubj,cfg,endstimp);
 %% save ccep
 
 for nSubj = 1:size(dataBase,2)
-    targetFolder = fullfile(myDataPath.proj_diroutput,'CCEPs', dataBase(nSubj).sub_label,dataBase(nSubj).ses_label);
+    targetFolder = fullfile(myDataPath.proj_diroutput, dataBase(nSubj).sub_label);
     
     % Create the folder if it doesn't exist already.
     if ~exist(targetFolder, 'dir')

@@ -1,6 +1,6 @@
 function dataBase = visualRating_ccep(myDataPath,dataBase,subj,cfg,endstimp)
 
-filefolder = fullfile(myDataPath.proj_diroutput,'CCEPs',dataBase(subj).sub_label,dataBase(subj).ses_label);
+filefolder = fullfile(myDataPath.proj_diroutput,dataBase(subj).sub_label);
 if ~exist(filefolder,'dir')
     mkdir(filefolder)
 end

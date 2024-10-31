@@ -127,14 +127,14 @@ for nSubj = 1:size(dataBase,2)
         spikespat.thresh_t_dif = thresh_t_dif;
         spikespat.thresh_SD = thresh_SD;
 
-        foldername = fullfile(myDataPath.visIEDpath,dataBase(nSubj).sub_label, dataBase(nSubj).ses_label);
+        foldername = fullfile(myDataPath.proj_diroutput,dataBase(nSubj).sub_label);
         if ~exist(foldername,'dir')
             mkdir(foldername)
         end
 
         filename = [dataBase(nSubj).sub_label,'_', dataBase(nSubj).ses_label, '_', dataBase(nSubj).task_label,'_', dataBase(nSubj).run_label,'_detIEDs.mat'];
 
-        save([foldername,'/',filename],'spikespat')
+        save(fullfile(foldername,filename),'spikespat')
     end
 end
 

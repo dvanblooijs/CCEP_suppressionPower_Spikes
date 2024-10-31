@@ -43,8 +43,8 @@ clear elecmatrix ll nSubj
 FSsubjectsdir = fullfile(myDataPath.proj_diroutput,'freesurfer');
 
 % load mni305 pial
-[Lmnipial_vert,Lmnipial_face] = read_surf(fullfile(FSsubjectsdir,'fsaverage','surf','lh.pial'));
-[Rmnipial_vert,Rmnipial_face] = read_surf(fullfile(FSsubjectsdir,'fsaverage','surf','rh.pial'));
+[Lmnipial_vert,Lmnipial_face] = read_surf(fullfile(FSsubjectsdir,'lh.pial'));
+[Rmnipial_vert,Rmnipial_face] = read_surf(fullfile(FSsubjectsdir,'rh.pial'));
 
 % housekeeping
 clear FSsubjectsdir 

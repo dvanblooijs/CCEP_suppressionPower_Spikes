@@ -1,7 +1,7 @@
 function dataBase = visualRating_tfspes(dataBase,subj,lookPic, myDataPath,endstimp)
 %%
 if ~isempty(myDataPath)
-    filefolder = fullfile(myDataPath.proj_diroutput,'ERSP',dataBase(subj).sub_label,dataBase(subj).ses_label,dataBase(subj).run_label);
+    filefolder = fullfile(myDataPath.proj_diroutput,dataBase(subj).sub_label);
     
     if ~exist(filefolder,'dir')
         mkdir(filefolder)

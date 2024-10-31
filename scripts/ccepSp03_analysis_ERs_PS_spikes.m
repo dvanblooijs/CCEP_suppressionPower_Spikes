@@ -73,83 +73,40 @@ dataBase = preprocess_ECoG_ccep(dataBase,cfg);
 
 disp('All ECoGs are preprocessed')
 
-%% load CCEPs
+%% load CCEPs, ERSP and IED
 
-files = dir(fullfile(myDataPath.proj_dirinput,'derivatives','CCEPs'));
+files = dir(fullfile(myDataPath.proj_dirinput,'derivatives'));
 
 for nSubj = 1:size(dataBase,2)
 
     idx_sub = contains({files(:).name}, dataBase(nSubj).sub_label) & [files(:).isdir] == 1;
 
-    ses = dir(fullfile(files(idx_sub).folder,files(idx_sub).name));
-    idx_ses = contains({ses(:).name}, dataBase(nSubj).ses_label);
-
-    file = dir(fullfile(ses(idx_ses).folder,ses(idx_ses).name));
+    file = dir(fullfile(files(idx_sub).folder,files(idx_sub).name));
     idx_ccepfile = contains({file(:).name},'N1s');
 
     if sum(idx_ccepfile)>0
         dataBase(nSubj).ccep = load(fullfile(file(idx_ccepfile).folder,file(idx_ccepfile).name));
     end
 
-end
-
-disp('CCEPs are loaded')
-
-% housekeeping
-clear idx_ERSPfile idx_ccepfile file files idx_ses idx_sub ses nSubj ans
-
-%% load ERSP
-
-files = dir(fullfile(myDataPath.proj_dirinput,'derivatives','ERSP'));
-
-for nSubj = 1:size(dataBase,2)
-
-    idx_sub = contains({files(:).name}, dataBase(nSubj).sub_label) & [files(:).isdir] == 1;
-
-    ses = dir(fullfile(files(idx_sub).folder,files(idx_sub).name));
-    idx_ses = contains({ses(:).name}, dataBase(nSubj).ses_label);
-
-    run = dir(fullfile(ses(idx_ses).folder,ses(idx_ses).name));
-    idx_run = contains({run(:).name},dataBase(nSubj).run_label);
-
-    file = dir(fullfile(ses(idx_ses).folder,ses(idx_ses).name,run(idx_run).name));
     idx_ERSPfile = contains({file(:).name},'ERSP.mat');
 
     if sum(idx_ERSPfile)>0
         dataBase(nSubj).ERSP = load(fullfile(file(idx_ERSPfile).folder,file(idx_ERSPfile).name));
     end
+
+    idx_detIED = contains({file(:).name},'detIEDs');
+
+    if sum(idx_detIED)>0
+        load(fullfile(file(idx_detIED).folder,file(idx_detIED).name));
+        dataBase(nSubj).IEDs = spikespat;
+    end
+
 end
 
-disp('ERSPs are loaded')
+disp('CCEPs, ERSP and IEDs are loaded')
 
 % housekeeping
-clear idx_ERSPfile idx_ccepfile file files idx_ses idx_sub ses nSubj ans run idx_run
-
-%% load spikes
-
-files = dir(fullfile(myDataPath.proj_dirinput,'derivatives','IEDs'));
-
-for nSubj = 1:size(dataBase,2)
-
-    idx_sub = contains({files(:).name}, dataBase(nSubj).sub_label);
-
-    if any(idx_sub)
-        ses = dir(fullfile(files(idx_sub).folder,files(idx_sub).name));
-        idx_ses = contains({ses(:).name}, dataBase(nSubj).ses_label);
-
-        file = dir(fullfile(ses(idx_ses).folder,ses(idx_ses).name));
-        idx_detIED = contains({file(:).name},'detIEDs');
-
-        if sum(idx_detIED)>0
-            load(fullfile(file(idx_detIED).folder,file(idx_detIED).name));
-            dataBase(nSubj).IEDs = spikespat;
-        end
-    end
-end
-
-disp('Spikes are loaded')
-
-clear nSubj ses spikespat idx_detIED idx_ses idx_sub file  files
+clear idx_ERSPfile idx_ccepfile idx_ERSPfile idx_detIED spikespat file files idx_sub nSubj 
 
 %% make both the ccep and ersp matrix equal regarding stimulation pairs and response channels
 

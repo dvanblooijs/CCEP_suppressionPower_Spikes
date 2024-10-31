@@ -9,7 +9,7 @@
 
 function dataBase = makeTFSPES(dataBase,myDataPath,cfg)
 
-for nSubj = 1:size(dataBase,2)
+for nSubj = 1%:size(dataBase,2)
 
     fs = dataBase(nSubj).ccep_header.Fs;
     
@@ -22,8 +22,8 @@ for nSubj = 1:size(dataBase,2)
     del_stimp = zeros(size(cc_epoch_sorted,3),1);
     
     %% Choose stimulation from specific electrode
-    for nStimp = 1:size(cc_epoch_sorted,3) % number for stim pair
-        for nChan = 1:size(cc_epoch_sorted,1) % number for recording electrode
+    for nStimp = 1%:size(cc_epoch_sorted,3) % number for stim pair
+        for nChan = 1%:size(cc_epoch_sorted,1) % number for recording electrode
             
             tmpsig = squeeze(cc_epoch_sorted(nChan,:,nStimp,:));
             tmpsig=tmpsig(:,round(fs):round(3*fs)-1);                                             % get 2 seconds (1sec before stim,1 sec after)
@@ -57,21 +57,22 @@ for nSubj = 1:size(dataBase,2)
                 outlabel = sprintf('Stimpair%s-%s_Response%s.jpg',...
                     dataBase(nSubj).cc_stimchans{nStimp,1},dataBase(nSubj).cc_stimchans{nStimp,2},dataBase(nSubj).ch{nChan});
                 
-                if strcmp(cfg.saveERSP,'yes')
-                    % Create a name for a subfolder within output
-                    output = fullfile(myDataPath.proj_diroutput,'ERSP',dataBase(nSubj).sub_label,dataBase(nSubj).ses_label,...
-                        dataBase(nSubj).run_label);
-                    
-                    newSubFolder = sprintf('%s/Stimpair%s-%s/', output,...
-                        dataBase(nSubj).cc_stimchans{nStimp,1},dataBase(nSubj).cc_stimchans{nStimp,2});
-                    
-                    % Create the folder if it doesn't exist already.
-                    if ~exist(newSubFolder, 'dir')
-                        mkdir(newSubFolder);
-                    end
-                    
-                    saveas(gcf,[newSubFolder,outlabel],'jpg')
-                end
+                % save ERSP-plots as jpg
+                % if strcmp(cfg.saveERSP,'yes')
+                %     % Create a name for a subfolder within output
+                %     output = fullfile(myDataPath.proj_diroutput,'ERSP',dataBase(nSubj).sub_label,dataBase(nSubj).ses_label,...
+                %         dataBase(nSubj).run_label);
+                % 
+                %     newSubFolder = sprintf('%s/Stimpair%s-%s/', output,...
+                %         dataBase(nSubj).cc_stimchans{nStimp,1},dataBase(nSubj).cc_stimchans{nStimp,2});
+                % 
+                %     % Create the folder if it doesn't exist already.
+                %     if ~exist(newSubFolder, 'dir')
+                %         mkdir(newSubFolder);
+                %     end
+                % 
+                %     saveas(gcf,[newSubFolder,outlabel],'jpg')
+                % end
                 
                 close(gcf);
                                 
@@ -96,7 +97,7 @@ for nSubj = 1:size(dataBase,2)
             allERSPboot = allERSPboot(~del_stimp,:);
             allERSP = allERSP(~del_stimp,:);
             
-            targetFolder = output;
+            targetFolder = fullfile(myDataPath.proj_diroutput,dataBase(nSubj).sub_label);
             fileName = [dataBase(nSubj).sub_label,'_' dataBase(nSubj).ses_label,...
                 '_', dataBase(nSubj).task_label,'_',dataBase(nSubj).run_label '_ERSP.mat'];
             cc_stimchans = dataBase(nSubj).cc_stimchans(~del_stimp,:);
