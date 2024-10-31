@@ -1,10 +1,14 @@
-%% Figure 3: odds ratio CCEPs vs Power Suppression
+%% Figure 2: odds ratio CCEPs vs Power Suppression
 % in all separate subjects
 % in all subjects combined
 
 %% first run ccepSp03_analysis_ERs_PS_spikes.m
 close all
 clc
+
+%% general parameters
+pFDR = 0.05;
+cmap = parula(101); % 0-1 with steps of 0.01
 
 %% combine all matrices with CCEPs and ERSPs of all subjects
 all_CCEPmat = [];
@@ -47,7 +51,6 @@ clear stats h p nSubj tbl
 % determine co-occurrence of ccep and ERSP suppression
 clc
 
-cmap = parula(101); % 0-1 with steps of 0.01
 tbl = crosstab(all_CCEPmat,all_ERSPmat);
 
 [~,p,stats] = fishertest(tbl);
@@ -64,7 +67,6 @@ fprintf('--- all subjects: OR = %2.1f, CI = %2.1f-%2.1f, p = %1.10f --- \n',...
 clear stats h p nSubj tbl
 
 %% apply FDR correction: p<0.001
-pFDR = 0.05;
 
 pVals = NaN(size(dataBase));
 for nSubj = 1:size(dataBase,2)

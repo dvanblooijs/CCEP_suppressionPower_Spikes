@@ -15,10 +15,10 @@ for nSubj = 1:size(dataBase,2)
     stimpair = dataBase(nSubj).tb_events.electrical_stimulation_site(contains(dataBase(nSubj).tb_events.sub_type,'SPES') & ~contains(dataBase(nSubj).tb_events.electrical_stimulation_site,'n/a')) ;
 
     stimnum = NaN(size(stimpair,1),2);
-    for stimp = 1:size(stimpair,1)
-        stimchans = strsplit(stimpair{stimp},'-');
-        for chan = 1:2
-            stimnum(stimp,chan) = find(strcmp(stimchans{chan},dataBase(nSubj).ch)==1);
+    for nStim = 1:size(stimpair,1)
+        stimchans = strsplit(stimpair{nStim},'-');
+        for nChan = 1:2
+            stimnum(nStim,nChan) = find(strcmp(stimchans{nChan},dataBase(nSubj).ch)==1);
         end
     end
           
@@ -41,9 +41,9 @@ for nSubj = 1:size(dataBase,2)
     
     cc_stimchans = cell(size(cc_stimsets,1),2);
     
-    for stimp = 1:size(cc_stimsets,1)
-        for chan =1:2
-            cc_stimchans{stimp,chan} = dataBase(nSubj).ch{cc_stimsets(stimp,chan)};
+    for nStim = 1:size(cc_stimsets,1)
+        for nChan =1:2
+            cc_stimchans{nStim,nChan} = dataBase(nSubj).ch{cc_stimsets(nStim,nChan)};
         end
     end
     
@@ -54,8 +54,8 @@ for nSubj = 1:size(dataBase,2)
     dataBase(nSubj).max_stim = max_stim;
     
     stimdif = find(n ~= max_stim);
-    for stimp =1:size(stimdif,2)
-        [cc_stimchans{stimdif(stimp),1} '-' cc_stimchans{stimdif(stimp),2}] %#ok<NOPRT>
+    for nStim = 1:size(stimdif,2)
+        [cc_stimchans{stimdif(nStim),1} '-' cc_stimchans{stimdif(nStim),2}] %#ok<NOPRT>
     end
     
     %% select epochs
@@ -65,10 +65,10 @@ for nSubj = 1:size(dataBase,2)
     cc_epoch_sorted = NaN(size(dataBase(nSubj).data,1),dataBase(nSubj).max_stim,size(dataBase(nSubj).cc_stimsets,1),t);
     tt_epoch_sorted = NaN(dataBase(nSubj).max_stim,size(dataBase(nSubj).cc_stimsets,1),t); % samplenumbers for each epoch
     
-    for elec = 1:size(dataBase(nSubj).data,1) % for all channels
-        for ll = 1:length(dataBase(nSubj).cc_stimsets) % for all epochs with >4 stimuli
-                eventnum1 = find(strcmp(dataBase(nSubj).tb_events.electrical_stimulation_site,[dataBase(nSubj).cc_stimchans{ll,1}, '-',dataBase(nSubj).cc_stimchans{ll,2}]));
-                eventnum2 = find(strcmp(dataBase(nSubj).tb_events.electrical_stimulation_site,[dataBase(nSubj).cc_stimchans{ll,2}, '-',dataBase(nSubj).cc_stimchans{ll,1}]));
+    for nChan = 1:size(dataBase(nSubj).data,1) % for all channels
+        for nStim = 1:length(dataBase(nSubj).cc_stimsets) % for all epochs with >4 stimuli
+                eventnum1 = find(strcmp(dataBase(nSubj).tb_events.electrical_stimulation_site,[dataBase(nSubj).cc_stimchans{nStim,1}, '-',dataBase(nSubj).cc_stimchans{nStim,2}]));
+                eventnum2 = find(strcmp(dataBase(nSubj).tb_events.electrical_stimulation_site,[dataBase(nSubj).cc_stimchans{nStim,2}, '-',dataBase(nSubj).cc_stimchans{nStim,1}]));
                 eventnum = [eventnum1;eventnum2];
             
             if size(eventnum,1) >dataBase(nSubj).max_stim
@@ -77,9 +77,9 @@ for nSubj = 1:size(dataBase,2)
                 events = size(eventnum,1);
             end
             
-            for n = 1:events
-                cc_epoch_sorted(elec,n,ll,:) = dataBase(nSubj).data(elec,dataBase(nSubj).tb_events.sample_start(eventnum(n))-round(epoch_prestim*dataBase(nSubj).ccep_header.Fs)+1:dataBase(nSubj).tb_events.sample_start(eventnum(n))+round((epoch_length-epoch_prestim)*dataBase(nSubj).ccep_header.Fs));
-                tt_epoch_sorted(n,ll,:) = dataBase(nSubj).tb_events.sample_start(eventnum(n))-round(epoch_prestim*dataBase(nSubj).ccep_header.Fs)+1:dataBase(nSubj).tb_events.sample_start(eventnum(n))+round((epoch_length-epoch_prestim)*dataBase(nSubj).ccep_header.Fs);
+            for nTrial = 1:events
+                cc_epoch_sorted(nChan,nTrial,nStim,:) = dataBase(nSubj).data(nChan,dataBase(nSubj).tb_events.sample_start(eventnum(nTrial))-round(epoch_prestim*dataBase(nSubj).ccep_header.Fs)+1:dataBase(nSubj).tb_events.sample_start(eventnum(nTrial))+round((epoch_length-epoch_prestim)*dataBase(nSubj).ccep_header.Fs));
+                tt_epoch_sorted(nTrial,nStim,:) = dataBase(nSubj).tb_events.sample_start(eventnum(nTrial))-round(epoch_prestim*dataBase(nSubj).ccep_header.Fs)+1:dataBase(nSubj).tb_events.sample_start(eventnum(nTrial))+round((epoch_length-epoch_prestim)*dataBase(nSubj).ccep_header.Fs);
             end
         end
     end

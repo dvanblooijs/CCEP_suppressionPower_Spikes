@@ -14,11 +14,7 @@ for nSubj = 1:size(dataBase,2)
     fs = dataBase(nSubj).ccep_header.Fs;
     
     % used rereferenced or not rereferenced data
-    if cfg.reref == 1
-        cc_epoch_sorted = dataBase(nSubj).cc_epoch_sorted_reref;
-    else
-        cc_epoch_sorted = dataBase(nSubj).cc_epoch_sorted;
-    end
+    cc_epoch_sorted = dataBase(nSubj).cc_epoch_sorted_reref;
 
     % pre-allocation
     allERSP = cell(size(cc_epoch_sorted,3),size(cc_epoch_sorted,1));
@@ -26,7 +22,7 @@ for nSubj = 1:size(dataBase,2)
     del_stimp = zeros(size(cc_epoch_sorted,3),1);
     
     %% Choose stimulation from specific electrode
-    for nStimp=1:size(cc_epoch_sorted,3) % number for stim pair
+    for nStimp = 1:size(cc_epoch_sorted,3) % number for stim pair
         for nChan = 1:size(cc_epoch_sorted,1) % number for recording electrode
             
             tmpsig = squeeze(cc_epoch_sorted(nChan,:,nStimp,:));

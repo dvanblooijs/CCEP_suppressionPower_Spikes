@@ -1,28 +1,36 @@
-% Figure 4: CCEPs vs spike ratio
+% Figure 3: CCEPs vs spike ratio
+% in this figure, we display the cumulative IED ratio, and violin plots
+% showing the spike ratios in response electrodes connected to the stimulus
+% pair, indicated with an cortico-cortical evoked potential (CCEP), or not
+% connected to the stimulus pair (the CCEP was absent).
 
 %% first run ccepSp03_analysis_ERs_PS_spikes.m
 close all
 clc
 
+%% general parameters
+pFDR = 0.05;
+cmap = parula(101); % 0-1 with steps of 0.01
+
 %% combine spike ratio and CCEPs of all subjects
 
 all_spikeratio = [];
 all_CCEPmat = [];
-for subj = 1:size(dataBase,2)
+for nSubj = 1:size(dataBase,2)
 
-    if any(contains(fieldnames(dataBase(subj).tb_electrodes),'ied'))
-        IEDmat = strcmp(dataBase(subj).tb_electrodes.ied,'yes');
+    if any(contains(fieldnames(dataBase(nSubj).tb_electrodes),'ied'))
+        IEDmat = strcmp(dataBase(nSubj).tb_electrodes.ied,'yes');
     else
-        IEDmat = false(size(dataBase(subj).tb_electrodes,1),1);
+        IEDmat = false(size(dataBase(nSubj).tb_electrodes,1),1);
     end
 
-    dataBase(subj).IEDmat = IEDmat;  %#ok<SAGROW>
+    dataBase(nSubj).IEDmat = IEDmat;  
 
-    if any(dataBase(subj).IEDmat)
+    if any(dataBase(nSubj).IEDmat)
 
-        all_spikeratio = [all_spikeratio; dataBase(subj).IEDs.spikesratio(:)]; %#ok<AGROW>
-        CCEPmat = dataBase(subj).CCEPmat(:,dataBase(subj).IEDs.IEDch);
-        all_CCEPmat = [all_CCEPmat; CCEPmat(:)]; %#ok<AGROW>
+        all_spikeratio = [all_spikeratio; dataBase(nSubj).IEDs.spikesratio(:)]; 
+        CCEPmat = dataBase(nSubj).CCEPmat(:,dataBase(nSubj).IEDs.IEDch);
+        all_CCEPmat = [all_CCEPmat; CCEPmat(:)]; 
     end
 end
 
@@ -32,7 +40,7 @@ names = cell(size(all_CCEPmat));
 [names{isnan(all_CCEPmat)}] = deal('z');
 
 % housekeeping
-clear subj CCEPmat
+clear nSubj CCEPmat
 
 %% statistics
 
@@ -61,7 +69,7 @@ xlabel('Logarithmic IED ratio')
 ylabel('Probability')
 
 figureName = sprintf('%s/fig4_SR_CCEP_cdf',...
-    myDataPath.Figures);
+    myDataPath.figures);
 
 set(gcf,'PaperPositionMode','auto')
 print('-dpng','-r300',figureName)
@@ -159,7 +167,6 @@ fprintf('Mean (positive SR) no CCEP = %1.2f\n',...
 fprintf('p = %f \n \n',pPos)
 
 %% apply FDR correction: p<0.05
-pFDR = 0.05;
 
 pVals = [pAbs, pNeg, pPos];
 
@@ -198,7 +205,7 @@ ax.XLabel.String = ' ';
 ax.Title.String = 'Spike ratio';
 
 figureName = sprintf('%s/fig4_SR_CCEP_normal',...
-    myDataPath.Figures);
+    myDataPath.figures);
 
 set(gcf,'PaperPositionMode','auto')
 print('-dpng','-r300',figureName)
@@ -250,7 +257,7 @@ ax.XLabel.String = ' ';
 ax.Title.String = 'Spike ratio';
 
 figureName = sprintf('%s/fig4_SR_CCEP_absolute',...
-    myDataPath.Figures);
+    myDataPath.figures);
 
 set(gcf,'PaperPositionMode','auto')
 print('-dpng','-r300',figureName)
@@ -303,7 +310,7 @@ ax.XLabel.String = ' ';
 ax.Title.String = 'Spike ratio';
 
 figureName = sprintf('%s/fig4_SR_CCEP_negative',...
-    myDataPath.Figures);
+    myDataPath.figures);
 
 set(gcf,'PaperPositionMode','auto')
 print('-dpng','-r300',figureName)
@@ -356,7 +363,7 @@ ax.XLabel.String = ' ';
 ax.Title.String = 'Spike ratio';
 
 figureName = sprintf('%s/fig4_SR_CCEP_positive',...
-    myDataPath.Figures);
+    myDataPath.figures);
 
 set(gcf,'PaperPositionMode','auto')
 print('-dpng','-r300',figureName)

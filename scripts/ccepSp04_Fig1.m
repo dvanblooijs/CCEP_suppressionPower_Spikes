@@ -1,7 +1,7 @@
 % Figure 1: 
 % B) example of ten responses to spes stimulation, 
-% C) a CCEP
-% D) an ERSP when there is a large change in spike ratio
+% C) a Cortico-cortical evoked potential
+% D) an Event-related Spectral Perturbation (ERSP) plot when there is a large change in spike ratio
 % E) the spike ratio of this subject
 
 %% first run ccepSp03_analysis_ERs_PS_spikes.m

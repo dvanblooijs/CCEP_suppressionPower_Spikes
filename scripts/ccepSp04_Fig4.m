@@ -1,17 +1,24 @@
-% Figure 5: ERSPs vs spike ratio
+% Figure 4: ERSPs vs spike ratio 
+% in this figure, we display the cumulative
+% IED ratio, and violin plots showing the spike ratios in response
+% electrodes displaying a suppression in power post-stimulation.
 
 %% first run ccepSp03_analysis_ERs_PS_spikes.m
 close all
 clc
 
+%% general parameters
+pFDR = 0.05;
+cmap = parula(101); % 0-1 with steps of 0.01
+
 %% combine spike ratio and ERSPs of all subjects
 
 all_spikeratio = [];
 all_ERSPmat = [];
-for subj = 1:size(dataBase,2)
-    if any(dataBase(subj).IEDmat)
-        all_spikeratio = [all_spikeratio; dataBase(subj).IEDs.spikesratio(:)]; %#ok<AGROW>
-        ERSPmat = dataBase(subj).ERSPmat(:,dataBase(subj).IEDs.IEDch);
+for nSubj = 1:size(dataBase,2)
+    if any(dataBase(nSubj).IEDmat)
+        all_spikeratio = [all_spikeratio; dataBase(nSubj).IEDs.spikesratio(:)]; %#ok<AGROW>
+        ERSPmat = dataBase(nSubj).ERSPmat(:,dataBase(nSubj).IEDs.IEDch);
         all_ERSPmat = [all_ERSPmat; ERSPmat(:)]; %#ok<AGROW>
     end
 end
@@ -22,7 +29,7 @@ names = cell(size(all_ERSPmat));
 [names{isnan(all_ERSPmat)}] = deal('z');
 
 % housekeeping
-clear subj ERSPmat
+clear nSubj ERSPmat
 
 %% statistics
 
@@ -51,7 +58,7 @@ xlabel('Logarithmic IED ratio')
 ylabel('Probability')
 
 figureName = sprintf('%s/fig5_SR_powerSup_cdf',...
-    myDataPath.Figures);
+    myDataPath.figures);
 
 set(gcf,'PaperPositionMode','auto')
 print('-dpng','-r300',figureName)
@@ -148,7 +155,6 @@ fprintf('Mean (positive SR) no powerSup = %1.2f\n',...
 fprintf('p = %f \n \n',pPos)
 
 %% apply FDR correction: p<0.05
-pFDR = 0.05;
 
 pVals = [pAbs, pNeg, pPos];
 
@@ -187,7 +193,7 @@ ax.XLabel.String = ' ';
 ax.Title.String = 'Spike ratio';
 
 figureName = sprintf('%s/fig5_SR_powerSup_normal',...
-    myDataPath.Figures);
+    myDataPath.figures);
 
 set(gcf,'PaperPositionMode','auto')
 print('-dpng','-r300',figureName)
@@ -239,7 +245,7 @@ ax.XLabel.String = ' ';
 ax.Title.String = 'Spike ratio';
 
 figureName = sprintf('%s/fig5_SR_powerSup_absolute',...
-    myDataPath.Figures);
+    myDataPath.figures);
 
 set(gcf,'PaperPositionMode','auto')
 print('-dpng','-r300',figureName)
@@ -292,7 +298,7 @@ ax.XLabel.String = ' ';
 ax.Title.String = 'Spike ratio';
 
 figureName = sprintf('%s/fig5_SR_powerSup_negative',...
-    myDataPath.Figures);
+    myDataPath.figures);
 
 set(gcf,'PaperPositionMode','auto')
 print('-dpng','-r300',figureName)
@@ -345,7 +351,7 @@ ax.XLabel.String = ' ';
 ax.Title.String = 'Spike ratio';
 
 figureName = sprintf('%s/fig5_SR_powerSup_positive',...
-    myDataPath.Figures);
+    myDataPath.figures);
 
 set(gcf,'PaperPositionMode','auto')
 print('-dpng','-r300',figureName)

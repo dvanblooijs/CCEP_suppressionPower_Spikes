@@ -1,6 +1,8 @@
-%% plotting a figure with the brain and electrodes on the brain
-% based on script in
-% https://github.com/MultimodalNeuroimagingLab/mnl_ccepBids/scripts/makeFig1A_plotMNI.m
+%% Fig1A: plotting a figure with the brain and electrodes on the brain
+% the stimulated electrodes are purple
+% the response electrode is blue
+% the white dots indicate the electrodes with interictal epileptiform
+% discharges
 
 %% first run ccepSp03_analysis_ERs_PS_spikes.m
 close all
@@ -28,7 +30,7 @@ for nSubj = 1:size(dataBase,2)
             dataBase(nSubj).tb_electrodes.z];
     end
     
-    dataBase(nSubj).elecmatrix = elecmatrix; %#ok<SAGROW> 
+    dataBase(nSubj).elecmatrix = elecmatrix; 
 end
 
 disp('All electrodes positions are converted to a matrix.')
